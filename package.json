@@ -1,0 +1,24 @@
+
+{
+  "name": "cse340-course-repo",
+  "version": "1.0.0",
+  "description": "CSE340 Web Backend Development - Service Network",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-student:chibueze-igbokwe/cse340-course-repo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "ejs": "^7.0.2",
+    "express": "^5.3.0"
+  }
+}
