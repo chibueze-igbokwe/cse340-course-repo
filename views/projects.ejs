@@ -10,7 +10,7 @@
     <% projects.forEach((project) => { %>
       <article class="card">
         <h2><a href="/project/<%= project.project_id %>"><%= project.title %></a></h2>
-        <p><strong>Date:</strong> <%= new Date(project.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
+        <p><strong>Date:</strong> <%= formatProjectDate(project.date) %></p>
         <p><strong>Organization:</strong> <a href="/organization/<%= project.organization_id %>"><%= project.organization_name %></a></p>
         <p><%= project.description %></p>
         <p><strong>Location:</strong> <%= project.location %></p>

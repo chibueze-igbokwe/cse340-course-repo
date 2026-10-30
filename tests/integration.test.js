@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { once } from 'node:events';
 
 process.env.NODE_ENV = 'production';
@@ -20,11 +20,20 @@ test('read-only verification against the configured PostgreSQL database and loca
     assert.equal(response.status, expectedStatus, path);
     return html;
   };
+  const projectLinks = (html) => [...html.matchAll(/href="\/project\/(\d+)"/g)].map((match) => Number(match[1]));
+  const sorted = (ids) => [...ids].sort((a, b) => a - b);
   try {
     await t.test('every existing model and relationship works with the real schema', async () => {
       const organizations = await organizationsModel.getAllOrganizations();
       const projects = await projectsModel.getAllProjects();
       const categories = await categoriesModel.getAllCategories();
+      // Independent SQL expectations prevent two incorrect model functions
+      // from making the relationship checks pass by agreeing with each other.
+      const { rows: relationships } = await db.query('SELECT project_id, category_id FROM project_category');
+      const { rows: calendarDates } = await db.query("SELECT project_id, to_char(date, 'YYYY-MM-DD') AS calendar_date, to_char(date, 'Mon FMDD, YYYY') AS display_date FROM project");
+      const dates = new Map(calendarDates.map((row) => [row.project_id, row]));
+      const organizationsHtml = await get('/organizations');
+      const categoriesHtml = await get('/categories');
       assert.ok(organizations.length, 'Need existing organizations to verify detail routes');
       assert.ok(projects.length, 'Need existing projects to verify detail routes');
       assert.ok(categories.length, 'Need existing categories to verify detail routes');
@@ -33,16 +42,31 @@ test('read-only verification against the configured PostgreSQL database and loca
         const linked = await projectsModel.getProjectsByOrganizationId(organization.organization_id);
         assert.deepEqual(linked.map((p) => p.project_id), projects.filter((p) => p.organization_id === organization.organization_id).map((p) => p.project_id));
         const html = await get(`/organization/${organization.organization_id}`);
+        assert.ok(organizationsHtml.includes(`href="/organization/${organization.organization_id}"`));
+        assert.ok(organizationsHtml.includes(`src="/images/${organization.logo}"`));
         assert.ok(html.includes(`src="/images/${organization.logo}"`));
-        assert.ok(existsSync(`public/images/${organization.logo}`), organization.logo);
-        await get(`/images/${organization.logo}`);
-        for (const project of linked) assert.ok(html.includes(`href="/project/${project.project_id}"`));
+        const logoResponse = await fetch(`${base}/images/${organization.logo}`);
+        assert.equal(logoResponse.status, 200);
+        assert.match(logoResponse.headers.get('content-type'), /image\/svg\+xml/);
+        assert.deepEqual(Buffer.from(await logoResponse.arrayBuffer()), readFileSync(`public/images/${organization.logo}`));
+        assert.deepEqual(sorted(projectLinks(html)), sorted(linked.map((p) => p.project_id)));
+        for (const project of linked) {
+          assert.equal(project.date, dates.get(project.project_id).calendar_date);
+          assert.ok(html.includes(dates.get(project.project_id).display_date));
+        }
+        console.log(`Verified database logo: ${organization.name} -> ${organization.logo}`);
       }
       for (const project of projects) {
         assert.deepEqual(await projectsModel.getProjectDetails(project.project_id), project);
         const html = await get(`/project/${project.project_id}`);
+        assert.equal(project.date, dates.get(project.project_id).calendar_date);
+        assert.ok(html.includes(dates.get(project.project_id).display_date));
         assert.ok(html.includes(`href="/organization/${project.organization_id}"`));
         const linked = await categoriesModel.getCategoriesByProjectId(project.project_id);
+        const expectedCategoryIds = sorted(relationships.filter((row) => row.project_id === project.project_id).map((row) => row.category_id));
+        assert.deepEqual(sorted(linked.map((row) => row.category_id)), expectedCategoryIds);
+        const tagIds = [...html.matchAll(/class="tag" href="\/category\/(\d+)"/g)].map((match) => Number(match[1]));
+        assert.deepEqual(sorted(tagIds), expectedCategoryIds);
         for (const category of linked) {
           assert.ok(html.includes(`href="/category/${category.category_id}"`));
           assert.ok((await projectsModel.getProjectsByCategoryId(category.category_id)).some((p) => p.project_id === project.project_id));
@@ -51,11 +75,40 @@ test('read-only verification against the configured PostgreSQL database and loca
       for (const category of categories) {
         assert.deepEqual(await categoriesModel.getCategoryDetails(category.category_id), category);
         const html = await get(`/category/${category.category_id}`);
-        for (const project of await projectsModel.getProjectsByCategoryId(category.category_id)) {
-          assert.ok(html.includes(`href="/project/${project.project_id}"`));
+        assert.ok(categoriesHtml.includes(`href="/category/${category.category_id}"`));
+        const linked = await projectsModel.getProjectsByCategoryId(category.category_id);
+        const expectedProjectIds = sorted(relationships.filter((row) => row.category_id === category.category_id).map((row) => row.project_id));
+        assert.deepEqual(sorted(linked.map((row) => row.project_id)), expectedProjectIds);
+        assert.deepEqual(sorted(projectLinks(html)), expectedProjectIds);
+        for (const project of linked) {
+          assert.equal(project.date, dates.get(project.project_id).calendar_date);
+          assert.ok(html.includes(dates.get(project.project_id).display_date));
         }
       }
       console.log(`Verified ${organizations.length} organizations, ${projects.length} projects, ${categories.length} categories and their detail routes.`);
+    });
+
+    await t.test('actual upcoming SQL includes today, excludes yesterday, sorts and limits read-only fixtures', async () => {
+      // CTEs shadow table names for this SELECT only. No records or tables are
+      // created, changed, or reset, even when the real data has no past dates.
+      const query = db.query;
+      db.query = (sql, values) => query.call(db, `
+        WITH project AS (
+          SELECT project_id, 1 AS organization_id,
+                 'Fixture ' || project_id AS title, ''::text AS description,
+                 ''::text AS location, CURRENT_DATE + day_offset AS date
+          FROM (VALUES (901, -1), (902, 3), (903, 0), (904, 1),
+                       (905, 6), (906, 2), (907, 5), (908, 4)) AS fixture(project_id, day_offset)
+        ), organization AS (
+          SELECT 1 AS organization_id, 'Fixture Organization'::text AS name
+        )
+        ${sql}
+      `, values);
+      try {
+        assert.deepEqual((await projectsModel.getUpcomingProjects(5)).map((row) => row.project_id), [903, 904, 906, 902, 908]);
+        assert.deepEqual((await projectsModel.getUpcomingProjects(100)).map((row) => row.project_id), [903, 904, 906, 902, 908, 907, 905]);
+        assert.deepEqual(await projectsModel.getUpcomingProjects(0), []);
+      } finally { db.query = query; }
     });
 
     await t.test('upcoming projects filter by database CURRENT_DATE and respect arbitrary limits', async () => {

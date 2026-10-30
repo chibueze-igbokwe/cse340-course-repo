@@ -6,7 +6,7 @@
       <li class="card">
         <h3><a href="/project/<%= project.project_id %>"><%= project.title %></a></h3>
         <p><%= project.description %></p>
-        <p><strong>Date:</strong> <%= new Date(project.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
+        <p><strong>Date:</strong> <%= formatProjectDate(project.date) %></p>
         <p><strong>Location:</strong> <%= project.location %></p>
       </li>
     <% }) %>

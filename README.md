@@ -28,6 +28,8 @@ The existing database connection uses TLS. No schema migration is required for W
 
 Database queries remain in models. Express 5 forwards rejected async controller promises to the centralized error handler. Existing EJS templates remain in `views/` to preserve the working Week 02 layout.
 
+PostgreSQL `DATE` values are preserved as `YYYY-MM-DD` strings by the pool's date parser in `src/models/db.js`. All project dates use the shared `src/utils/format-project-date.js` helper, exposed to templates through `app.locals.formatProjectDate`. It interprets and formats the calendar day in UTC, avoiding host-timezone shifts. Other PostgreSQL types retain their default parsers. No schema or stored date values are changed.
+
 ## Schema and routes
 
 The existing schema is unchanged:
@@ -66,8 +68,8 @@ All dynamic SQL values use placeholders. Views escape database text with `<%= ..
 | Command | Coverage |
 | --- | --- |
 | `npm run check` | `scripts/check.js` checks JavaScript syntax and compiles every EJS template |
-| `npm test` | `tests/week03.test.js` checks model parameter binding, all routes, reciprocal links, escaping, invalid/missing IDs, empty states, database failures, production error privacy, CSS, and all three static SVG logos; `tests/development.test.js` checks development middleware and diagnostics |
-| `npm run test:integration` | `tests/integration.test.js` makes read-only queries to the configured database and verifies actual records, relationships, upcoming-project limits, HTTP routes, logo filenames/assets, and error responses |
+| `npm test` | `tests/week03.test.js` checks model parameter binding, all routes, reciprocal links, escaping, invalid/missing IDs, empty states, database failures, production error privacy, CSS, and all three static SVG logos; `tests/development.test.js` checks development middleware and escaped diagnostics; `tests/dates.test.js` renders all four project-date pages in UTC, Lagos, Los Angeles, and Kiritimati, including year boundaries, leap day, and daylight-saving transition dates |
+| `npm run test:integration` | `tests/integration.test.js` makes read-only queries to the configured database and verifies actual records, exact category relationships against the join table, dates against independent SQL formatting, upcoming-project limits, HTTP routes, database logo filenames and served image bytes, and error responses. A SELECT-only CTE fixture exercises yesterday/today boundaries, ordering, and limits without modifying database records |
 
 No lint tool was configured in the original repository; the `check` command is a syntax/template check, not a lint claim. The tests use Node's built-in test runner and require no new dependencies. Integration checks require network access to the existing database. No integration test resets or modifies stored data.
 

@@ -23,6 +23,12 @@ test('development middleware logs requests and exposes escaped error details onl
     const html = await error.text();
     assert.match(html, /Error details \(development only\)/);
     assert.match(html, /This is a test error/);
+    t.mock.method(db, 'query', async () => { throw new Error('<script>private failure</script>'); });
+    const databaseError = await fetch(base + '/organizations');
+    assert.equal(databaseError.status, 500);
+    const databaseHtml = await databaseError.text();
+    assert.match(databaseHtml, /&lt;script&gt;private failure&lt;\/script&gt;/);
+    assert.ok(!databaseHtml.includes('<script>private failure</script>'));
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await db.end();

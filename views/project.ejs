@@ -5,7 +5,7 @@
   <p class="intro"><%= project.description %></p>
   <dl class="project-details">
     <dt>Date</dt>
-    <dd><%= new Date(project.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></dd>
+    <dd><%= formatProjectDate(project.date) %></dd>
     <dt>Location</dt>
     <dd><%= project.location %></dd>
     <dt>Organization</dt>

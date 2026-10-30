@@ -15,7 +15,7 @@ let base;
 let calls;
 let mode;
 const organization = { organization_id: 1, name: 'Community & Care', description: '<script>alert(1)</script>', email: 'hello@example.com', logo: 'community.svg' };
-const project = { project_id: 1, organization_id: 1, organization_name: organization.name, title: 'Food <Drive>', description: organization.description, location: 'Town & Hall', date: new Date(2026, 10, 7) };
+const project = { project_id: 1, organization_id: 1, organization_name: organization.name, title: 'Food <Drive>', description: organization.description, location: 'Town & Hall', date: '2026-11-07' };
 const category = { category_id: 1, name: 'Community <Support>' };
 
 before(async () => {

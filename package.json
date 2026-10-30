@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test tests/week03.test.js tests/development.test.js",
+    "test": "node --test tests/week03.test.js tests/development.test.js tests/dates.test.js",
     "test:integration": "node --test tests/integration.test.js",
     "check": "node scripts/check.js"
   },
