@@ -1,9 +1,16 @@
 <%- include('partials/header') %>
 <main id="main-content" class="container section">
-  <p class="eyebrow">Opportunities to serve</p><h1>Service Projects</h1>
-  <p class="intro">Here are a few example projects that demonstrate how volunteers can make a difference.</p>
-  <div class="card-grid"><article class="card"><span class="tag">Environmental</span><h2>Neighborhood Cleanup</h2><p>Help care for public spaces and keep shared areas welcoming.</p></article>
-  <article class="card"><span class="tag">Educational</span><h2>Reading Support</h2><p>Encourage young learners through reading and mentoring.</p></article>
-  <article class="card"><span class="tag">Community Service</span><h2>Community Food Drive</h2><p>Work with neighbors to organize food donations for local families.</p></article></div>
+  <p class="eyebrow">Opportunities to serve</p>
+  <h1>Service Projects</h1>
+  <p class="intro">Explore upcoming projects organized by local service organizations.</p>
+  <div class="card-grid">
+    <% projects.forEach((project) => { %>
+      <article class="card">
+        <h2><%= new Date(project.date).toLocaleDateString('en-US', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }) %>: <%= project.title %> (<em><%= project.organization_name %></em>)</h2>
+        <p><%= project.description %></p>
+        <p><strong>Location:</strong> <%= project.location %></p>
+      </article>
+    <% }) %>
+  </div>
 </main>
 <%- include('partials/footer') %>
