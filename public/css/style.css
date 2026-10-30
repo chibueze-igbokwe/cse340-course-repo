@@ -19,7 +19,10 @@ a {
 }
 
 a:focus-visible,
-summary:focus-visible {
+summary:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
   outline: 3px solid #e4a93d;
   outline-offset: 3px;
 }
@@ -138,6 +141,71 @@ h3 {
   color: #17362a;
   text-decoration: none;
   font-weight: 750;
+}
+
+button.button {
+  border: 0;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.organization-form {
+  max-width: 680px;
+}
+
+.form-group {
+  margin-block: 24px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 700;
+}
+
+.form-group input,
+.form-group textarea {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #51645b;
+  border-radius: 6px;
+  background: #fff;
+  color: #19312b;
+  font: inherit;
+}
+
+.field-help {
+  color: #51645b;
+  margin-block: 6px;
+}
+
+.field-error {
+  color: #8c2424;
+  margin-block: 6px;
+}
+
+[aria-invalid="true"] {
+  border-color: #8c2424;
+}
+
+.alert {
+  padding: 18px;
+  margin-block: 20px;
+  border: 1px solid #17694d;
+  border-radius: 8px;
+  background: #e4f4eb;
+  overflow-wrap: anywhere;
+}
+
+.alert.error {
+  border-color: #8c2424;
+  background: #fff1ef;
+  color: #6e2020;
+}
+
+.alert.error a {
+  color: #6e2020;
 }
 
 .button-outline {

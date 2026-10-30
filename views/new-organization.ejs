@@ -1,0 +1,8 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/organizations">All organizations</a></p>
+  <h1>Add New Organization</h1>
+  <p class="intro">Add an organization to Service Network. All fields are required. New organizations use a placeholder logo.</p>
+  <%- include('partials/organization-form', { editing: false }) %>
+</main>
+<%- include('partials/footer') %>

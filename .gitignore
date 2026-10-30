@@ -145,5 +145,8 @@ vite.config.ts.timestamp-*
 # Astro generated types
 .astro/
 
+# Private server-side session files
+.sessions/
+
 # Turbo Repo
 .turbo

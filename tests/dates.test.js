@@ -36,7 +36,7 @@ for (const [timezone, offset] of [['UTC', 0], ['Africa/Lagos', -60], ['America/L
           const locals = {
             title: 'Date test', NODE_ENV: 'production', project, projects: [project],
             categories: [], category: { name: 'Category' },
-            organizationDetails: { name: 'Organization', description: 'Description', logo: 'community.svg', email: 'hello@example.com' }
+            organizationDetails: { organization_id: 1, name: 'Organization', description: 'Description', logo: 'community.svg', email: 'hello@example.com' }
           };
           for (const view of ['projects', 'project', 'organization', 'category']) {
             assert.ok((await render(view, locals)).includes(expected), view + ': ' + date + ' must display ' + expected);

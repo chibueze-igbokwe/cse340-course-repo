@@ -20,3 +20,9 @@
       </nav>
     </div>
   </header>
+  <% const messages = flash(); %>
+  <% Object.entries(messages).forEach(([type, entries]) => { %>
+    <% entries.forEach((message) => { %>
+      <div class="container alert <%= type %>" role="status"><%= message %></div>
+    <% }); %>
+  <% }); %>
