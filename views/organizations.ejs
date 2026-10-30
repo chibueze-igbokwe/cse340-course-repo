@@ -6,6 +6,11 @@
   <div class="card-grid">
     <% organizations.forEach((organization) => { %>
       <article class="card image-card">
+        <img
+          src="/images/<%= organization.logo %>"
+          alt="<%= organization.name %> logo"
+          loading="lazy"
+        >
         <div class="card-body">
           <h2><%= organization.name %></h2>
           <p><%= organization.description %></p>

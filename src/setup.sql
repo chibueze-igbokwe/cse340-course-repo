@@ -38,9 +38,9 @@ CREATE TABLE project_category (
 );
 
 INSERT INTO organization (name, description, email, logo) VALUES
-('Community Care Network', 'Connects volunteers with neighborhood support initiatives.', 'hello@communitycare.example', 'community-care.svg'),
-('Green Future Initiative', 'Organizes environmental stewardship and sustainability projects.', 'contact@greenfuture.example', 'green-future.svg'),
-('Learning Together Alliance', 'Supports education, literacy, and youth mentorship.', 'team@learningtogether.example', 'learning-together.svg');
+('Community Care Network', 'Connects volunteers with neighborhood support initiatives.', 'hello@communitycare.example', 'community.svg'),
+('Green Future Initiative', 'Organizes environmental stewardship and sustainability projects.', 'contact@greenfuture.example', 'environment.svg'),
+('Learning Together Alliance', 'Supports education, literacy, and youth mentorship.', 'team@learningtogether.example', 'education.svg');
 
 INSERT INTO project (organization_id, title, description, location, date) VALUES
 (1, 'Neighborhood Food Drive', 'Collect and sort shelf-stable food for local families.', 'Community Center', '2026-11-07'),
