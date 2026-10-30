@@ -1,0 +1,13 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/organizations">All organizations</a></p>
+  <h1><%= organizationDetails.name %></h1>
+  <img class="organization-logo" src="/images/<%= organizationDetails.logo %>" alt="<%= organizationDetails.name %> logo">
+  <p class="intro"><%= organizationDetails.description %></p>
+  <p><strong>Email:</strong> <a href="mailto:<%= organizationDetails.email %>"><%= organizationDetails.email %></a></p>
+  <section aria-labelledby="organization-projects">
+    <h2 id="organization-projects">Service projects</h2>
+    <%- include('partials/project-list', { projects }) %>
+  </section>
+</main>
+<%- include('partials/footer') %>

@@ -18,7 +18,8 @@ a {
   color: #17694d;
 }
 
-a:focus-visible {
+a:focus-visible,
+summary:focus-visible {
   outline: 3px solid #e4a93d;
   outline-offset: 3px;
 }
@@ -221,6 +222,44 @@ h3 {
 
 .category-icon {
   font-size: 2rem;
+}
+
+.project-list,
+.category-tags {
+  list-style: none;
+  padding: 0;
+}
+
+.category-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.organization-logo {
+  display: block;
+  width: min(100%, 420px);
+  height: auto;
+  border-radius: 14px;
+}
+
+.project-details dt {
+  font-weight: 700;
+}
+
+.project-details dd {
+  margin: 0 0 18px;
+}
+
+.card,
+.intro,
+dd {
+  overflow-wrap: anywhere;
+}
+
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* Footer */

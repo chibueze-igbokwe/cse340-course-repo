@@ -1,6 +1,6 @@
   <footer class="site-footer">
     <div class="container footer-inner">
-      <p>&copy; <%= new Date().getFullYear() %> Service Network. All rights reserved.</p>
+      <p>&copy; <%= new Date().getFullYear() %> Service Network. All rights reserved.<% if (NODE_ENV === 'development') { %> (Development mode)<% } %></p>
       <p>Connecting people through service.</p>
     </div>
   </footer>

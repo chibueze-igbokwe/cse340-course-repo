@@ -1,0 +1,15 @@
+<%- include('../partials/header') %>
+<main id="main-content" class="container section">
+  <p class="eyebrow">500 error</p>
+  <h1>Something Went Wrong</h1>
+  <p>We could not complete your request. Please try again later.</p>
+  <p><a href="/">Return to the home page</a>.</p>
+  <% if (NODE_ENV === 'development') { %>
+    <details>
+      <summary>Error details (development only)</summary>
+      <pre><%= error %></pre>
+      <pre><%= stack %></pre>
+    </details>
+  <% } %>
+</main>
+<%- include('../partials/footer') %>

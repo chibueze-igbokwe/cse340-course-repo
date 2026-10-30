@@ -1,0 +1,27 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/projects">Upcoming service projects</a></p>
+  <h1><%= project.title %></h1>
+  <p class="intro"><%= project.description %></p>
+  <dl class="project-details">
+    <dt>Date</dt>
+    <dd><%= new Date(project.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></dd>
+    <dt>Location</dt>
+    <dd><%= project.location %></dd>
+    <dt>Organization</dt>
+    <dd><a href="/organization/<%= project.organization_id %>"><%= project.organization_name %></a></dd>
+  </dl>
+  <section aria-labelledby="project-categories">
+    <h2 id="project-categories">Categories</h2>
+    <% if (categories.length === 0) { %>
+      <p>No categories have been assigned to this project yet.</p>
+    <% } else { %>
+      <ul class="category-tags">
+        <% categories.forEach((category) => { %>
+          <li><a class="tag" href="/category/<%= category.category_id %>"><%= category.name %></a></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+</main>
+<%- include('partials/footer') %>

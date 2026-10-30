@@ -3,9 +3,12 @@
   <p class="eyebrow">Find your cause</p>
   <h1>Service Project Categories</h1>
   <p class="intro">Browse the types of service opportunities available through Service Network.</p>
+  <% if (categories.length === 0) { %>
+    <p>No categories are available yet. Please check back soon.</p>
+  <% } %>
   <div class="card-grid category-grid">
     <% categories.forEach((category) => { %>
-      <article class="card"><h2><%= category.name %></h2></article>
+      <article class="card"><h2><a href="/category/<%= category.category_id %>"><%= category.name %></a></h2></article>
     <% }) %>
   </div>
 </main>
