@@ -1,0 +1,8 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/project/<%= projectId %>">Return to project details</a></p>
+  <h1>Edit Service Project</h1>
+  <p class="intro">Update the project details or choose a different organization. All fields are required.</p>
+  <%- include('partials/project-form', { editing: true }) %>
+</main>
+<%- include('partials/footer') %>

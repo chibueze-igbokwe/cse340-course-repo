@@ -22,6 +22,7 @@ a:focus-visible,
 summary:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
+select:focus-visible,
 button:focus-visible {
   outline: 3px solid #e4a93d;
   outline-offset: 3px;
@@ -150,7 +151,8 @@ button.button {
   cursor: pointer;
 }
 
-.organization-form {
+.organization-form,
+.project-form {
   max-width: 680px;
 }
 
@@ -164,6 +166,7 @@ button.button {
 }
 
 .form-group input,
+.form-group select,
 .form-group textarea {
   display: block;
   width: 100%;
@@ -206,6 +209,33 @@ button.button {
 
 .alert.error a {
   color: #6e2020;
+}
+
+.project-form fieldset {
+  padding: 20px;
+  border: 1px solid #51645b;
+  border-radius: 8px;
+}
+
+.project-form legend {
+  font-weight: 700;
+}
+
+.category-option {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-block: 12px;
+}
+
+.category-option label {
+  padding-block: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .button-outline {

@@ -23,7 +23,11 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(fileURLToPath(new URL('./public', import.meta.url))));
-app.use(express.urlencoded({ extended: false, limit: '16kb', parameterLimit: 10, inflate: false }));
+const formOptions = { extended: false, limit: '16kb', parameterLimit: 10, inflate: false };
+// Checkbox groups can submit many repeated categoryIds keys; keep the other
+// forms' existing ten-parameter limit while allowing up to 99 selections.
+app.use('/assign-categories', express.urlencoded({ ...formOptions, parameterLimit: 100 }));
+app.use(express.urlencoded(formOptions));
 app.use(session(createSessionOptions()));
 app.use(flash);
 app.use(router);

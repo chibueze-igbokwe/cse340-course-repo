@@ -74,9 +74,9 @@ All dynamic SQL values use placeholders. Views escape database text with `<%= ..
 
 No lint tool was configured in the original repository; the `check` command is a syntax/template check, not a lint claim. Tests use Node's built-in test runner without a separate test framework. Integration checks require network access to the existing database. No integration test resets or modifies stored data.
 
-## Week 04 foundation: organization forms only
+## Week 04 foundation and organization forms
 
-This branch adds the organization workflow from the form submission, session/flash, validation, and updating activities. Project/category write workflows and authentication are outside this change. The existing database schema and Week 03 features are preserved. No migration, session table, reset, or reseed is needed.
+This branch adds the organization workflow from the form submission, session/flash, validation, and updating activities, followed by the project and category-assignment workflows below. Category creation/editing and authentication remain outside this change. The existing database schema and Week 03 features are preserved. No migration, session table, reset, or reseed is needed.
 
 | Route | Behavior |
 | --- | --- |
@@ -93,7 +93,7 @@ Validation uses `express-validator` with the course's `organizationValidation` c
 
 Validation failures re-render HTTP 422 with submitted values, a linked error summary, field errors, and `aria-invalid`/`aria-describedby`. A duplicate name returns HTTP 409 with an actionable field error. Database failures return HTTP 500 while preserving entries and hiding internal details. Invalid/missing IDs return HTTP 404, including deletion between the lookup and update.
 
-URL-encoded parsing uses flat fields (`extended: false`), a 16 KB body limit, a 10-parameter limit, and disabled compression. Oversized forms return HTTP 413, malformed forms HTTP 400, and unsupported compression HTTP 415. Missing or foreign-session CSRF tokens return HTTP 403 without a database write.
+URL-encoded parsing uses flat fields (`extended: false`), a 16 KB body limit, a 10-parameter limit, and disabled compression. The category-assignment route alone allows 100 parameters (a CSRF token plus up to 99 checkbox selections). Oversized forms return HTTP 413, malformed forms HTTP 400, and unsupported compression HTTP 415. Missing or foreign-session CSRF tokens return HTTP 403 without a database write.
 
 Sessions use `express-session` and `session-file-store`; course-style flash middleware lives in `src/middleware/flash.js`. Cookies are HTTP-only, SameSite=Lax, and Secure in production, with a one-hour lifetime. Unmodified anonymous sessions are not saved. Production assumes one trusted reverse proxy (such as Render's HTTPS proxy); local HTTP requires `NODE_ENV=development`. The signing key comes only from `SESSION_SECRET`; startup rejects a missing/short key. The application saves success messages before redirecting, consumes them when a template renders, and leaves them intact for static asset requests.
 
@@ -115,6 +115,53 @@ New and changed Week 04 files:
 - `tests/dates.test.js`: keeps its organization fixture consistent with the existing schema.
 
 Run `npm run check`, `npm test`, and (with database connectivity) `npm run test:integration`. Automated create/update tests mock the database; a successful live database INSERT/UPDATE is deliberately not claimed. Browser visual/keyboard checks and live write/deployment checks remain separate.
+
+## Week 04 service projects and category assignments
+
+| Route | Behavior |
+| --- | --- |
+| `GET /new-project` | Project form with organization dropdown |
+| `POST /new-project` | Validate fields and selected organization; insert and redirect HTTP 303 to the new project's details |
+| `GET /edit-project/:id` | Prefilled form, exact PostgreSQL `YYYY-MM-DD` date, current organization selected |
+| `POST /edit-project/:id` | Update project fields, including `organization_id`; redirect HTTP 303 with one-time success flash |
+| `GET /assign-categories/:projectId` | Checkboxes for all categories, with existing assignments selected |
+| `POST /assign-categories/:projectId` | Replace assignments atomically; redirect HTTP 303 with success flash |
+
+The project list links to creation; project details link to editing and category assignment. All three POST routes enforce the existing session-bound CSRF protection and use parameterized model queries. Create/edit checks that the submitted organization actually exists. Foreign-key races return helpful form errors. Validation failures return HTTP 422 and retain submitted text, date, and organization selection; database write failures return a helpful HTTP 500 form. Invalid/missing project IDs and a project deleted between lookup and save return HTTP 404.
+
+`createProject(title, description, location, date, organizationId)` returns the inserted ID. `updateProject(id, title, description, location, date, organizationId)` can change the organization and throws an Error with status 404 when no row is returned, as required by the team activity. The organization table itself is not changed when moving a project.
+
+Validation requires title 3–200 characters, description 1–1,000, location 1–200, a real four-digit-year Gregorian calendar date, and one positive PostgreSQL INTEGER organization ID. Text is trimmed; repeated scalar fields, NUL characters, invalid dates, and unknown organizations are rejected. Date validation rejects rollover dates, timestamps, and year zero; past dates remain valid for editing historical projects. Browser constraints match the server's field limits. EJS escapes database and submitted text. An empty organization directory explains the prerequisite and disables submission.
+
+Category assignment follows the separate course learning activity. `updateCategoryAssignments(projectId, categoryIds)` checks out one client, begins a transaction, locks and verifies the project, deletes its old assignments, inserts the unique desired IDs using the internal `assignCategoryToProject` helper, and commits. Any failure rolls back and always releases the client. The row lock serializes concurrent replacements for the same project. `ON CONFLICT` and deduplication prevent duplicate links. Selecting no categories removes all assignments. Unknown category IDs and malformed field names return HTTP 422; valid selections are retained on errors. A category removed during saving causes a rollback and an actionable error rather than partial changes.
+
+Course inconsistencies resolved:
+
+- The insertion activity's early HTML limits differ from its later validation examples. Both browser and server use the later limits (200/1,000/200), respecting the existing schema. The SQL table is the existing singular `project`.
+- The insertion prose mentions redirecting to the list, while its sample redirects to project details. The implementation uses details, consistent with the organization workflow and team activity.
+- The team activity briefly mentions `update-project.ejs` but otherwise names `edit-project.ejs`; this implementation uses `edit-project.ejs` in the existing root `views/` directory.
+- The category activity alternates between route/field names. This implementation follows its actual form and route examples: `/assign-categories/:projectId` and repeated `categoryIds` fields, plus the repository's existing `getCategoriesByProjectId` function.
+
+Changed files for this continuation:
+
+- `src/models/projects.js`: parameterized create/update functions and missing-row Error.
+- `src/models/categories.js`: transactional category replacement and private parameterized assignment helper.
+- `src/controllers/projects.js`: course-named project form controllers, validation, organization existence checks, errors, and redirects.
+- `src/controllers/categories.js`: course-named assignment form controllers, category validation, and preserved selections.
+- `src/routes.js`: six GET/POST route registrations.
+- `src/middleware/validate-resource-id.js`: validates either `id` or course-style `projectId` parameters.
+- `src/utils/validate-project-date.js`: timezone-independent calendar validation.
+- `server.js`: bounded category checkbox parser while preserving other form limits.
+- `views/new-project.ejs`, `views/edit-project.ejs`, `views/partials/project-form.ejs`: accessible project forms with shared styling and error feedback.
+- `views/assign-categories.ejs`: accessible assignment form with checked selections and empty/error states.
+- `views/projects.ejs`, `views/project.ejs`: create/edit/assignment navigation links.
+- `public/css/style.css`: project form, select, fieldset, checkbox, disabled button, and keyboard-focus styles.
+- `tests/project-forms.test.js`, `package.json`: mocked write/transaction tests and inclusion in the test command.
+- `tests/dates.test.js`: checks edit-form dates and selected organizations in four runtime timezones.
+- `tests/integration.test.js`: GET-only verification of real project edit fields and category checkbox selections against independent relationship data.
+- `README.md`: requirements mapping, ambiguity decisions, and verification limits.
+
+No database records are created or updated by automated live integration checks. Mocked write tests cover SQL parameter binding, organization changes, invalid submissions, duplicate category IDs, rollback/release, missing/deleted records, CSRF, date boundaries, retained values, and success flashes. The read-only integration suite checks all existing real projects' edit and assignment forms. No branch is merged or deployed by these commands.
 
 ## Hosting verification before submission
 

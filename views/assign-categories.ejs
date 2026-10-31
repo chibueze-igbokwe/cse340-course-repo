@@ -1,0 +1,28 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/project/<%= project.project_id %>">Return to project details</a></p>
+  <h1>Assign Categories to Project</h1>
+  <h2><%= project.title %></h2>
+  <% if (error) { %>
+    <p class="alert error" role="alert" id="categories-error"><%= error %></p>
+  <% } %>
+  <form class="project-form" action="/assign-categories/<%= project.project_id %>" method="POST">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <fieldset aria-describedby="categories-help<%= error ? ' categories-error' : '' %>">
+      <legend>Project categories</legend>
+      <p id="categories-help">Select the categories for this project. Clear all checkboxes to remove all assignments.</p>
+      <% if (!categories.length) { %><p>No categories are available yet.</p><% } %>
+      <% categories.forEach((category) => { %>
+        <div class="category-option">
+          <input type="checkbox" id="category-<%= category.category_id %>" name="categoryIds" value="<%= category.category_id %>"<%= selectedCategoryIds.includes(category.category_id) ? ' checked' : '' %>>
+          <label for="category-<%= category.category_id %>"><%= category.name %></label>
+        </div>
+      <% }) %>
+    </fieldset>
+    <div class="actions">
+      <button class="button" type="submit">Update Categories</button>
+      <a href="/project/<%= project.project_id %>">Cancel</a>
+    </div>
+  </form>
+</main>
+<%- include('partials/footer') %>

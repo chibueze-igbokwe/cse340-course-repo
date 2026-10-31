@@ -121,6 +121,43 @@ test('read-only verification against the configured PostgreSQL database and loca
       // Intentionally no valid POST requests to the real database.
     });
 
+    await t.test('project create/edit and assignment GET forms match real dates, organizations and category links', async () => {
+      const response = await fetch(base + '/new-project', { headers: { 'X-Forwarded-Proto': 'https' } });
+      assert.equal(response.status, 200);
+      const cookie = response.headers.get('set-cookie').split(';')[0];
+      const newHtml = await response.text();
+      assert.match(newHtml, /action="\/new-project" method="POST"/);
+      const organizations = await organizationsModel.getAllOrganizations();
+      const categories = await categoriesModel.getAllCategories();
+      const { rows: links } = await db.query('SELECT project_id, category_id FROM project_category');
+      for (const organization of organizations) {
+        assert.ok(newHtml.includes(`value="${organization.organization_id}">${ejs.escapeXML(organization.name)}</option>`));
+      }
+      const formGet = async (path) => {
+        const page = await fetch(base + path, { headers: { 'X-Forwarded-Proto': 'https', Cookie: cookie } });
+        assert.equal(page.status, 200, path);
+        return page.text();
+      };
+      for (const project of await projectsModel.getAllProjects()) {
+        const editHtml = await formGet(`/edit-project/${project.project_id}`);
+        assert.ok(editHtml.includes(`value="${project.date}"`));
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(project.title)}"`));
+        assert.ok(editHtml.includes(`value="${project.organization_id}" selected>`));
+        const assignmentsHtml = await formGet(`/assign-categories/${project.project_id}`);
+        const checked = [...assignmentsHtml.matchAll(/name="categoryIds" value="(\d+)" checked/g)].map((match) => Number(match[1]));
+        const expected = links.filter((link) => link.project_id === project.project_id).map((link) => link.category_id);
+        assert.deepEqual(sorted(checked), sorted(expected));
+        for (const category of categories) {
+          assert.ok(assignmentsHtml.includes(`for="category-${category.category_id}">${ejs.escapeXML(category.name)}</label>`));
+        }
+      }
+      for (const route of ['/edit-project/', '/assign-categories/']) {
+        for (const id of ['abc', '0', '-1', '2147483648', '2147483647']) await get(route + id, 404);
+      }
+      assert.match(await get('/projects'), /href="\/new-project"/);
+      // No POST requests: shared project and relationship records are untouched.
+    });
+
     await t.test('actual upcoming SQL includes today, excludes yesterday, sorts and limits read-only fixtures', async () => {
       // CTEs shadow table names for this SELECT only. No records or tables are
       // created, changed, or reset, even when the real data has no past dates.
