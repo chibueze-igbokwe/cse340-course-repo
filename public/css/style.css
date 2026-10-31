@@ -146,6 +146,14 @@ h3 {
 }
 
 /* Main Content */
+.home-image {
+  display: block;
+  width: min(100%, 600px);
+  height: auto;
+  margin-block: 24px;
+  border-radius: 14px;
+}
+
 .section {
   padding-block: 72px 90px;
 }

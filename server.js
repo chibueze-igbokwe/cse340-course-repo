@@ -15,21 +15,21 @@ app.get('/', (req, res) => res.render('home', { title: 'Home | Service Network' 
 app.get('/organizations', async (req, res, next) => {
   try {
     const organizations = await getAllOrganizations();
-    res.render('organizations', { title: 'Organizations | Service Network', organizations });
+    res.render('organizations', { title: 'Organizations | Service Network', pageHeading: 'Organizations', organizations });
   } catch (error) { next(error); }
 });
 
 app.get('/projects', async (req, res, next) => {
   try {
     const projects = await getAllProjects();
-    res.render('projects', { title: 'Projects | Service Network', projects });
+    res.render('projects', { title: 'Projects | Service Network', pageHeading: 'Service Projects', projects });
   } catch (error) { next(error); }
 });
 
 app.get('/categories', async (req, res, next) => {
   try {
     const categories = await getAllCategories();
-    res.render('categories', { title: 'Categories | Service Network', categories });
+    res.render('categories', { title: 'Categories | Service Network', pageHeading: 'Service Project Categories', categories });
   } catch (error) { next(error); }
 });
 
