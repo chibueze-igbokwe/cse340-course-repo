@@ -1,5 +1,30 @@
 import db from './db.js';
 
+export const createCategory = async (name) => {
+  const result = await db.query(`
+    INSERT INTO category (name)
+    VALUES ($1)
+    RETURNING category_id
+  `, [name]);
+  if (!result.rows.length) throw new Error('Failed to create category');
+  return result.rows[0].category_id;
+};
+
+export const updateCategory = async (id, name) => {
+  const result = await db.query(`
+    UPDATE category
+    SET name = $1
+    WHERE category_id = $2
+    RETURNING category_id
+  `, [name, id]);
+  if (!result.rows.length) {
+    const error = new Error('Category not found');
+    error.status = 404;
+    throw error;
+  }
+  return result.rows[0].category_id;
+};
+
 const assignCategoryToProject = async (client, projectId, categoryId) => {
   await client.query(`
     INSERT INTO project_category (project_id, category_id)

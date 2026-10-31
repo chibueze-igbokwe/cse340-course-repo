@@ -11,7 +11,8 @@ import {
   showEditProjectForm, processEditProjectForm, projectValidation
 } from './controllers/projects.js';
 import {
-  showCategoriesPage, showCategoryDetailsPage, showAssignCategoriesForm, processAssignCategoriesForm
+  showCategoriesPage, showCategoryDetailsPage, showAssignCategoriesForm, processAssignCategoriesForm,
+  showNewCategoryForm, processNewCategoryForm, showEditCategoryForm, processEditCategoryForm, categoryValidation
 } from './controllers/categories.js';
 import { testErrorPage } from './controllers/errors.js';
 import { validateResourceId } from './middleware/validate-resource-id.js';
@@ -36,6 +37,10 @@ router.get('/assign-categories/:projectId', validateResourceId, showAssignCatego
 router.post('/assign-categories/:projectId', validateResourceId, requireFormToken, processAssignCategoriesForm);
 router.get('/categories', showCategoriesPage);
 router.get('/category/:id', validateResourceId, showCategoryDetailsPage);
+router.get('/new-category', showNewCategoryForm);
+router.post('/new-category', requireFormToken, categoryValidation, processNewCategoryForm);
+router.get('/edit-category/:id', validateResourceId, showEditCategoryForm);
+router.post('/edit-category/:id', validateResourceId, requireFormToken, categoryValidation, processEditCategoryForm);
 router.get('/test-error', testErrorPage);
 
 // Express 5 forwards rejected async controller promises to the error handler.

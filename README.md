@@ -76,7 +76,7 @@ No lint tool was configured in the original repository; the `check` command is a
 
 ## Week 04 foundation and organization forms
 
-This branch adds the organization workflow from the form submission, session/flash, validation, and updating activities, followed by the project and category-assignment workflows below. Category creation/editing and authentication remain outside this change. The existing database schema and Week 03 features are preserved. No migration, session table, reset, or reseed is needed.
+This branch adds the organization workflow from the form submission, session/flash, validation, and updating activities, followed by the project, category-assignment, and category create/edit workflows below. Authentication remains outside Week 04's requested scope. The existing database schema and Week 03 features are preserved. No migration, session table, reset, or reseed is needed.
 
 | Route | Behavior |
 | --- | --- |
@@ -162,6 +162,50 @@ Changed files for this continuation:
 - `README.md`: requirements mapping, ambiguity decisions, and verification limits.
 
 No database records are created or updated by automated live integration checks. Mocked write tests cover SQL parameter binding, organization changes, invalid submissions, duplicate category IDs, rollback/release, missing/deleted records, CSRF, date boundaries, retained values, and success flashes. The read-only integration suite checks all existing real projects' edit and assignment forms. No branch is merged or deployed by these commands.
+
+## Week 04 assignment: creating and editing categories
+
+| Route | Behavior |
+| --- | --- |
+| `GET /new-category` | Blank category-name form with CSRF token |
+| `POST /new-category` | Validate, insert, flash success, redirect HTTP 303 to category details |
+| `GET /edit-category/:id` | Existing category name prepopulated in the edit form |
+| `POST /edit-category/:id` | Validate and update the URL's category ID, flash success, redirect HTTP 303 |
+
+The client intentionally validates **only required input and maximum length 100**. There is no category `minlength`, minimum-length pattern, or JavaScript minimum-length check. This lets one- and two-character names reach the server as required by the assignment. `categoryValidation` trims strings and enforces presence and length 3–100 on the server. Short names return HTTP 422 with a preserved value and accessible field error, without an INSERT or UPDATE. Repeated name parameters and NUL characters are rejected.
+
+`createCategory(name)` and `updateCategory(id, name)` use SQL placeholders and return the saved ID. `updateCategory` throws an Error with status 404 if no row is returned. Duplicate names return HTTP 409 with helpful feedback, other database failures preserve the entered name in an HTTP 500 form, and invalid/missing IDs return HTTP 404. Both POST routes require the existing session-bound CSRF token. EJS escapes all names. Updating a name keeps the original category ID and does not rewrite project-category relationships.
+
+Category links use the existing directory/detail pattern: `/categories` links to creation and each category detail page links to editing. New forms reuse the shared form styles, focus indicators, labels, linked error summary, and `aria-describedby`/`aria-invalid` feedback.
+
+Changed files for the category assignment:
+
+- `src/models/categories.js`: parameterized `createCategory` and `updateCategory` functions.
+- `src/controllers/categories.js`: `categoryValidation`, `showNewCategoryForm`, `processNewCategoryForm`, `showEditCategoryForm`, `processEditCategoryForm`, form feedback, duplicate handling, and success redirects.
+- `src/routes.js`: four category GET/POST route registrations, ID checks, CSRF, and server validation.
+- `views/new-category.ejs`, `views/edit-category.ejs`, `views/partials/category-form.ejs`: accessible create/edit forms with intentionally server-only minimum-length validation.
+- `views/categories.ejs`, `views/category.ejs`: create/edit navigation.
+- `public/css/style.css`: category form width uses the existing form styling.
+- `tests/category-forms.test.js`, `package.json`: category route/model tests added to the existing suite, including rendered browser attributes, one-/two-character POST rejection with zero writes, 3/100/101-character boundaries, whitespace, CSRF, SQL parameter binding, duplicates, missing/deleted records, escaped/preserved names, success flashes, and retained project links/tags.
+- `tests/integration.test.js`: GET-only checks against actual category names and production sessions, plus invalid/missing edit IDs.
+- `tests/dates.test.js`: existing category fixture now includes its schema-defined ID for the edit link.
+- `README.md`: implementation summary and full Week 04 review.
+
+## Full Week 04 requirements review
+
+Reviewed against the [official Week 04 assignment](https://byui-cse.github.io/cse340-ww-course-v2/week04/assignment.html) and the preceding learning/team activities.
+
+| Area | Implementation and verification | Remaining verification |
+| --- | --- | --- |
+| Organizations | Create/edit routes, course-named controllers, parameterized writes, browser/server validation, error feedback and flash messages; mocked write tests and real-record GET integration checks | Controlled live write test and browser interaction |
+| Service projects | Create/edit, change organization, exact date prepopulation, organization existence checks, calendar validation, parameterized SQL and missing-row errors; mocked writes plus real-record form checks | Controlled live write test and browser interaction |
+| Categories | Required/max-100 browser constraints, server-only min-3, create/edit models/controllers/forms, escaped/preserved values, duplicate handling, CSRF, redirects and navigation | Controlled live write test and browser interaction |
+| Category assignments | Existing-category checkboxes, add/remove/clear selections, transactional replacement, rollback/release, locking and deduplication; mocked transactions and real relationship GET checks | Controlled live write test and browser interaction |
+| MVC and security | SQL exclusively in models; named controllers; application routes in `src/routes.js`; root EJS views; parameterized values, bounded form parsing, sessions and CSRF; existing regression tests retained | No missing implementation identified in the requested scope |
+| Professional style and accessibility | Existing responsive CSS, semantic forms, labels, keyboard focus styling, readable errors and success feedback; rendered HTML checked automatically | Manual mobile/desktop visual and keyboard/screen-reader review |
+| Deployment and submission | Changes remain on `week04-inserting-updating`; no deployment or merge is performed | Course rubric requires a functional hosted deployment and GitHub/Render submission links; hosting has not been verified for this branch |
+
+Write tests use mocks; live integration tests issue read-only queries and GET requests. Passing these tests does not claim successful live INSERT/UPDATE operations, Render deployment, or a guaranteed grade. No reset, reseed, schema migration, or modification to stored records is performed. `main` and `week03-mvc` remain protected from this work.
 
 ## Hosting verification before submission
 

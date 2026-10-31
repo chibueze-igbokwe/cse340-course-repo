@@ -1,7 +1,63 @@
-import { getAllCategories, getCategoryDetails, getCategoriesByProjectId, updateCategoryAssignments } from '../models/categories.js';
+import {
+  getAllCategories, getCategoryDetails, getCategoriesByProjectId,
+  updateCategoryAssignments, createCategory, updateCategory
+} from '../models/categories.js';
 import { getProjectsByCategoryId, getProjectDetails } from '../models/projects.js';
 import { notFound } from './errors.js';
 import { formToken } from '../middleware/csrf.js';
+import { body, validationResult } from 'express-validator';
+
+// The three-character minimum intentionally exists only on the server.
+export const categoryValidation = [
+  body('name').isString().withMessage('Enter one category name.').bail()
+    .trim().notEmpty().withMessage('Category name is required.').bail()
+    .isLength({ min: 3, max: 100 }).withMessage('Category name must be between 3 and 100 characters.').bail()
+    .not().contains('\0').withMessage('Category name contains an invalid character.')
+];
+
+const renderCategoryForm = (req, res, {
+  editing = false, name = '', errors = {}, formError = '', status = 200
+} = {}) => res.status(status).render(editing ? 'edit-category' : 'new-category', {
+  title: `${editing ? 'Edit' : 'Add New'} Category | Service Network`,
+  categoryId: editing ? req.params.id : null,
+  name, errors, formError, csrfToken: formToken(req)
+});
+
+export const showNewCategoryForm = (req, res) => renderCategoryForm(req, res);
+
+export const showEditCategoryForm = async (req, res, next) => {
+  const category = await getCategoryDetails(req.params.id);
+  if (!category) return notFound(req, res, next);
+  return renderCategoryForm(req, res, { editing: true, name: category.name });
+};
+
+const processCategoryForm = async (req, res, next, editing) => {
+  const name = typeof req.body?.name === 'string' ? req.body.name : '';
+  let id;
+  try {
+    if (editing && !await getCategoryDetails(req.params.id)) return notFound(req, res, next);
+    const errors = Object.fromEntries(validationResult(req).array({ onlyFirstError: true })
+      .map((error) => [error.path, error.msg]));
+    if (Object.keys(errors).length) {
+      return renderCategoryForm(req, res, { editing, name, errors, status: 422 });
+    }
+    id = editing ? await updateCategory(req.params.id, name) : await createCategory(name);
+  } catch (error) {
+    if (error.status === 404) return next(error);
+    if (error.code === '23505') {
+      return renderCategoryForm(req, res, { editing, name, status: 409,
+        errors: { name: 'A category with this name already exists. Please choose another name.' } });
+    }
+    console.error('Category save failed:', error);
+    return renderCategoryForm(req, res, { editing, name, status: 500,
+      formError: 'We could not save the category. Your entry is preserved. Please try again later.' });
+  }
+  req.flash('success', editing ? 'Category updated successfully!' : 'Category added successfully!');
+  req.session.save((error) => error ? next(error) : res.redirect(303, `/category/${id}`));
+};
+
+export const processNewCategoryForm = (req, res, next) => processCategoryForm(req, res, next, false);
+export const processEditCategoryForm = (req, res, next) => processCategoryForm(req, res, next, true);
 
 const renderAssignments = (req, res, project, categories, selectedCategoryIds, { status = 200, error = '' } = {}) => {
   return res.status(status).render('assign-categories', {

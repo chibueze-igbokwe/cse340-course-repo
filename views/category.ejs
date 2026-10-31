@@ -3,6 +3,7 @@
   <p><a href="/categories">All categories</a></p>
   <p class="eyebrow">Find your cause</p>
   <h1><%= category.name %></h1>
+  <p><a href="/edit-category/<%= category.category_id %>">Edit <%= category.name %></a></p>
   <section aria-labelledby="category-projects">
     <h2 id="category-projects">Service projects</h2>
     <%- include('partials/project-list', { projects }) %>

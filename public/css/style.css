@@ -152,6 +152,7 @@ button.button {
 }
 
 .organization-form,
+.category-form,
 .project-form {
   max-width: 680px;
 }

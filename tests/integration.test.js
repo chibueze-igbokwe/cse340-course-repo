@@ -158,6 +158,32 @@ test('read-only verification against the configured PostgreSQL database and loca
       // No POST requests: shared project and relationship records are untouched.
     });
 
+    await t.test('category forms prepopulate real names, expose only the required browser constraints and preserve sessions', async () => {
+      const response = await fetch(base + '/new-category', { headers: { 'X-Forwarded-Proto': 'https' } });
+      assert.equal(response.status, 200);
+      const cookie = response.headers.get('set-cookie').split(';')[0];
+      const newHtml = await response.text();
+      const token = newHtml.match(/name="_csrf" value="([a-f0-9]{64})"/)[1];
+      assert.match(newHtml, /action="\/new-category" method="POST"/);
+      assert.match(newHtml, /maxlength="100" required/);
+      assert.doesNotMatch(newHtml, /\bminlength\s*=|\bpattern\s*=|<script\b/i);
+      assert.match(await get('/categories'), /href="\/new-category"/);
+      for (const category of await categoriesModel.getAllCategories()) {
+        const edit = await fetch(`${base}/edit-category/${category.category_id}`, {
+          headers: { 'X-Forwarded-Proto': 'https', Cookie: cookie }
+        });
+        assert.equal(edit.status, 200);
+        const editHtml = await edit.text();
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(category.name)}"`));
+        assert.ok(editHtml.includes(`action="/edit-category/${category.category_id}" method="POST"`));
+        assert.ok(editHtml.includes(`value="${token}"`));
+        assert.doesNotMatch(editHtml, /\bminlength\s*=|\bpattern\s*=|<script\b/i);
+        assert.ok((await get(`/category/${category.category_id}`)).includes(`href="/edit-category/${category.category_id}"`));
+      }
+      for (const id of ['abc', '0', '-1', '2147483648', '2147483647']) await get('/edit-category/' + id, 404);
+      // Deliberately GET-only; category creation and updates use mocks in unit tests.
+    });
+
     await t.test('actual upcoming SQL includes today, excludes yesterday, sorts and limits read-only fixtures', async () => {
       // CTEs shadow table names for this SELECT only. No records or tables are
       // created, changed, or reset, even when the real data has no past dates.
