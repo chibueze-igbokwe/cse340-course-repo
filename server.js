@@ -7,6 +7,7 @@ import { formatProjectDate } from './src/utils/format-project-date.js';
 import session from 'express-session';
 import { createSessionOptions } from './src/middleware/session.js';
 import flash from './src/middleware/flash.js';
+import { formToken } from './src/middleware/csrf.js';
 
 dotenv.config();
 const app = express();
@@ -16,6 +17,10 @@ app.set('view engine', 'ejs');
 app.set('views', fileURLToPath(new URL('./views', import.meta.url)));
 app.locals.formatProjectDate = formatProjectDate;
 app.locals.flash = () => ({});
+app.locals.isLoggedIn = false;
+app.locals.isAdmin = false;
+app.locals.currentUser = null;
+app.locals.logoutCsrf = '';
 if (NODE_ENV === 'production') app.set('trust proxy', 1);
 app.use((req, res, next) => {
   if (NODE_ENV === 'development') console.log(req.method, req.path);
@@ -30,6 +35,13 @@ app.use('/assign-categories', express.urlencoded({ ...formOptions, parameterLimi
 app.use(express.urlencoded(formOptions));
 app.use(session(createSessionOptions()));
 app.use(flash);
+app.use((req, res, next) => {
+  res.locals.currentUser = req.session.user || null;
+  res.locals.isLoggedIn = Boolean(req.session.user);
+  res.locals.isAdmin = req.session.user?.role_name === 'admin';
+  res.locals.logoutCsrf = req.session.user ? formToken(req) : '';
+  next();
+});
 app.use(router);
 app.use(notFound);
 app.use(errorHandler);

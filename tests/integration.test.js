@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { once } from 'node:events';
 import { extname } from 'node:path';
 import ejs from 'ejs';
+import { verifyDevelopmentDatabase } from './verify-development-database.js';
 
 process.env.NODE_ENV = 'production';
 const { default: db } = await import('../src/models/db.js');
@@ -13,9 +14,23 @@ const projectsModel = await import('../src/models/projects.js');
 const categoriesModel = await import('../src/models/categories.js');
 
 test('read-only verification against the configured PostgreSQL database and local HTTP server', async (t) => {
+  await verifyDevelopmentDatabase(db);
+  assert.ok(process.env.GRADING_ADMIN_PASSWORD, 'Supply the grading password through the environment');
   const server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
+  let authCookie = '';
+  let lastCookieHeader = '';
+  const fetch = async (url, options = {}) => {
+    const response = await globalThis.fetch(url, { ...options, redirect: 'manual', headers: {
+      'X-Forwarded-Proto': 'https', ...(authCookie ? { Cookie: authCookie } : {}), ...options.headers
+    } });
+    if (response.headers.get('set-cookie')) {
+      lastCookieHeader = response.headers.get('set-cookie');
+      authCookie = lastCookieHeader.split(';')[0];
+    }
+    return response;
+  };
   const get = async (path, expectedStatus = 200) => {
     const response = await fetch(base + path);
     const html = await response.text();
@@ -25,6 +40,12 @@ test('read-only verification against the configured PostgreSQL database and loca
   const projectLinks = (html) => [...html.matchAll(/href="\/project\/(\d+)"/g)].map((match) => Number(match[1]));
   const sorted = (ids) => [...ids].sort((a, b) => a - b);
   try {
+    const loginForm = await (await fetch(base + '/login')).text();
+    const loginToken = loginForm.match(/name="_csrf" value="([a-f0-9]{64})"/)[1];
+    await verifyDevelopmentDatabase(db);
+    const login = await fetch(base + '/login', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ email: 'admin@example.com', password: process.env.GRADING_ADMIN_PASSWORD, _csrf: loginToken }) });
+    assert.equal(login.status, 303);
+    assert.equal(login.headers.get('location'), '/dashboard');
     await t.test('every existing model and relationship works with the real schema', async () => {
       const organizations = await organizationsModel.getAllOrganizations();
       const projects = await projectsModel.getAllProjects();
@@ -94,7 +115,7 @@ test('read-only verification against the configured PostgreSQL database and loca
     await t.test('Week 04 GET forms use real organization fields and production sessions without writing database records', async () => {
       const response = await fetch(base + '/new-organization', { headers: { 'X-Forwarded-Proto': 'https' } });
       assert.equal(response.status, 200);
-      const cookie = response.headers.get('set-cookie');
+      const cookie = response.headers.get('set-cookie') || lastCookieHeader;
       assert.match(cookie, /HttpOnly/);
       assert.match(cookie, /Secure/);
       assert.match(cookie, /SameSite=Lax/);
@@ -124,7 +145,7 @@ test('read-only verification against the configured PostgreSQL database and loca
     await t.test('project create/edit and assignment GET forms match real dates, organizations and category links', async () => {
       const response = await fetch(base + '/new-project', { headers: { 'X-Forwarded-Proto': 'https' } });
       assert.equal(response.status, 200);
-      const cookie = response.headers.get('set-cookie').split(';')[0];
+      const cookie = (response.headers.get('set-cookie') || lastCookieHeader).split(';')[0];
       const newHtml = await response.text();
       assert.match(newHtml, /action="\/new-project" method="POST"/);
       const organizations = await organizationsModel.getAllOrganizations();
@@ -161,7 +182,7 @@ test('read-only verification against the configured PostgreSQL database and loca
     await t.test('category forms prepopulate real names, expose only the required browser constraints and preserve sessions', async () => {
       const response = await fetch(base + '/new-category', { headers: { 'X-Forwarded-Proto': 'https' } });
       assert.equal(response.status, 200);
-      const cookie = response.headers.get('set-cookie').split(';')[0];
+      const cookie = (response.headers.get('set-cookie') || lastCookieHeader).split(';')[0];
       const newHtml = await response.text();
       const token = newHtml.match(/name="_csrf" value="([a-f0-9]{64})"/)[1];
       assert.match(newHtml, /action="\/new-category" method="POST"/);

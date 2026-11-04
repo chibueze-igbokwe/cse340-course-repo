@@ -31,8 +31,8 @@
     </div>
     <div class="form-group">
       <label for="password">Password</label>
-      <p class="field-help" id="password-help">Use at least 8 characters and at most 72 UTF-8 bytes. Non-ASCII characters can use more than one byte. Re-enter your password if the form has errors.</p>
-      <input type="password" id="password" name="password" minlength="8" maxlength="72" autocomplete="new-password" required
+      <p class="field-help" id="password-help">Use at least 7 characters and at most 72 UTF-8 bytes. Non-ASCII characters can use more than one byte. Re-enter your password if the form has errors.</p>
+      <input type="password" id="password" name="password" minlength="7" maxlength="72" autocomplete="new-password" required
         aria-invalid="<%= Boolean(errors.password) %>" aria-describedby="password-help<%= errors.password ? ' password-error' : '' %>">
       <% if (errors.password) { %><p class="field-error" id="password-error"><%= errors.password %></p><% } %>
     </div>

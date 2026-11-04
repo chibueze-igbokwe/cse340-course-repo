@@ -1,0 +1,11 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <h1>Dashboard</h1>
+  <p><strong>Name:</strong> <%= name %></p>
+  <p><strong>Email:</strong> <%= email %></p>
+  <% if (isAdmin) { %>
+    <p><a class="button" href="/users">Registered Users</a></p>
+  <% } %>
+  <p><a href="/projects">Browse service projects</a></p>
+</main>
+<%- include('partials/footer') %>

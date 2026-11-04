@@ -1,0 +1,29 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <h1>Login</h1>
+  <% if (formError || Object.keys(errors).length) { %>
+    <section class="alert error" role="alert" aria-labelledby="login-errors">
+      <h2 id="login-errors">We could not log you in</h2>
+      <% if (formError) { %><p><%= formError %></p><% } %>
+      <% Object.entries(errors).forEach(([field, message]) => { %>
+        <p><a href="#<%= field %>"><%= message %></a></p>
+      <% }) %>
+    </section>
+  <% } %>
+  <form class="registration-form" action="/login" method="POST">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" value="<%= email %>" maxlength="100" autocomplete="username" required aria-invalid="<%= Boolean(errors.email) %>"<% if (errors.email) { %> aria-describedby="email-error"<% } %>>
+      <% if (errors.email) { %><p class="field-error" id="email-error"><%= errors.email %></p><% } %>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" maxlength="72" autocomplete="current-password" required aria-invalid="<%= Boolean(errors.password) %>"<% if (errors.password) { %> aria-describedby="password-error"<% } %>>
+      <% if (errors.password) { %><p class="field-error" id="password-error"><%= errors.password %></p><% } %>
+    </div>
+    <button class="button" type="submit">Login</button>
+    <p><a href="/register">Register for an account</a></p>
+  </form>
+</main>
+<%- include('partials/footer') %>

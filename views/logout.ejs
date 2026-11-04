@@ -1,0 +1,11 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <h1>Logout</h1>
+  <p>Log out of your Service Network account?</p>
+  <form action="/logout" method="POST">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="button" type="submit">Logout</button>
+    <a href="/dashboard">Cancel</a>
+  </form>
+</main>
+<%- include('partials/footer') %>

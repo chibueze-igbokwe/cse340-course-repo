@@ -17,7 +17,16 @@
         <a href="/organizations">Organizations</a>
         <a href="/projects">Projects</a>
         <a href="/categories">Categories</a>
-        <a href="/register">Register</a>
+        <% if (isLoggedIn) { %>
+          <a href="/dashboard">My Dashboard</a>
+          <form class="nav-logout" action="/logout" method="POST">
+            <input type="hidden" name="_csrf" value="<%= logoutCsrf %>">
+            <button type="submit">Logout</button>
+          </form>
+        <% } else { %>
+          <a href="/login">Login</a>
+          <a href="/register">Register</a>
+        <% } %>
       </nav>
     </div>
   </header>

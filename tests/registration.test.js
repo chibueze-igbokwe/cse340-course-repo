@@ -112,7 +112,7 @@ test('invalid registration is rejected before hashing or querying; non-secret in
   for (const overrides of [
     { name: '' }, { name: '   ' }, { name: 'n'.repeat(101) }, { name: 'Bad\0Name' },
     { email: '' }, { email: 'not-email' }, { email: 'a'.repeat(90) + '@example.com' },
-    { password: '' }, { password: 'short' }, { password: '        ' },
+    { password: '' }, { password: 'short' }, { password: 'sixsix' }, { password: '        ' },
     { password: 'p'.repeat(73) }, { password: '😀'.repeat(19) }, { password: 'A valid\0password' }
   ]) {
     const result = await request('/register', { ...valid, ...overrides, _csrf: token });
@@ -136,12 +136,12 @@ test('invalid registration is rejected before hashing or querying; non-secret in
   assert.equal(calls.length, 0);
 });
 
-test('registration accepts name/email schema boundaries and 8-character/72-byte password boundaries', async () => {
+test('registration accepts name/email schema boundaries and 7-character/72-byte password boundaries', async () => {
   const request = client();
   const { token } = await openForm(request);
   const email100 = 'a'.repeat(50) + '@' + 'b'.repeat(45) + '.com';
   assert.equal(email100.length, 100);
-  for (const password of ['8letters', 'p'.repeat(72), '😀'.repeat(18)]) {
+  for (const password of ['7letter', 'p'.repeat(72), '😀'.repeat(18)]) {
     const result = await request('/register', { name: 'n'.repeat(100), email: email100, password, _csrf: token });
     assert.equal(result.status, 303);
     const hash = calls.at(-1).values[2];
@@ -201,9 +201,14 @@ test('CSRF rejects missing/incorrect/foreign/repeated tokens before hashing or d
   assert.equal(calls.length, 0);
 });
 
-test('Phase 2 endpoints are not implemented and registration does not query them', async () => {
+test('anonymous dashboard and users access redirects to login without querying user records', async () => {
   const request = client();
-  for (const route of ['/login', '/logout', '/dashboard', '/admin/users']) assert.equal((await request(route)).status, 404);
+  assert.equal((await request('/login')).status, 200);
+  for (const route of ['/logout', '/dashboard', '/users']) {
+    const response = await request(route);
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get('location'), '/login');
+  }
   assert.equal(calls.length, 0);
 });
 
@@ -214,6 +219,6 @@ test('unit database guard and integration isolation gate refuse unsafe connectio
     input: "throw new Error('Application must never run without isolation confirmation');", encoding: 'utf8'
   });
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /Integration checks require a separate DEV_DB_URL/);
+  assert.match(result.stderr, /Integration checks require a localhost cse340_development database/);
   assert.ok(!result.stderr.includes('Application must never run without isolation confirmation'));
 });

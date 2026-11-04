@@ -1,3 +1,4 @@
+import { mockAdminLookup, authenticatedAdminClient } from './admin-client.js';
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -31,6 +32,7 @@ before(async () => {
     if (/FROM project/.test(sql)) return { rows: [project] };
     throw new Error('Unexpected category-test query: ' + sql);
   };
+  db.query = mockAdminLookup(db.query);
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   base = `http://127.0.0.1:${server.address().port}`;
@@ -43,15 +45,13 @@ after(async () => {
 });
 
 const client = () => {
-  let cookie = '';
+  const adminRequest = authenticatedAdminClient(base);
   return async (path, data) => {
-    const response = await fetch(base + path, {
-      method: data ? 'POST' : 'GET', redirect: 'manual',
-      headers: { ...(cookie ? { cookie } : {}), ...(data ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
+    return adminRequest(path, {
+      method: data ? 'POST' : 'GET',
+      headers: data ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
       body: data ? new URLSearchParams(data) : undefined
     });
-    if (response.headers.get('set-cookie')) cookie = response.headers.get('set-cookie').split(';')[0];
-    return { status: response.status, html: await response.text(), headers: response.headers };
   };
 };
 const openForm = async (request, path = '/new-category') => {

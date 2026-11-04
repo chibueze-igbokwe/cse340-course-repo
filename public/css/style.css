@@ -76,6 +76,17 @@ button:focus-visible {
   text-decoration: underline;
 }
 
+.nav-logout { margin: 0; }
+.nav-logout button {
+  border: 0; background: none; padding: 0; color: #25453a;
+  font: inherit; font-weight: 650; cursor: pointer;
+}
+.nav-logout button:hover { text-decoration: underline; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+caption { text-align: left; margin-bottom: 12px; }
+th, td { padding: 14px; text-align: left; border-bottom: 1px solid #e0e8e2; overflow-wrap: anywhere; }
+
 /* Hero Section */
 .hero {
   background: linear-gradient(120deg, #123d31, #1b6b50);

@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --import ./tests/setup-unit-env.js --test tests/week03.test.js tests/development.test.js tests/dates.test.js tests/week04.test.js tests/project-forms.test.js tests/category-forms.test.js tests/registration.test.js",
-    "test:integration": "node --import ./tests/setup-integration-env.js --test tests/integration.test.js",
+    "test": "node --import ./tests/setup-unit-env.js --test tests/week03.test.js tests/development.test.js tests/dates.test.js tests/week04.test.js tests/project-forms.test.js tests/category-forms.test.js tests/registration.test.js tests/authentication.test.js",
+    "test:integration": "node --import ./tests/setup-integration-env.js --test --test-concurrency=1 tests/auth-integration.test.js tests/integration.test.js",
     "check": "node scripts/check.js"
   },
   "repository": {

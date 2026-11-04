@@ -9,7 +9,9 @@ if (!process.env.DB_URL) {
 
 const db = new pg.Pool({
   connectionString: process.env.DB_URL,
-  ssl: { rejectUnauthorized: false },
+  // Local PostgreSQL commonly has no TLS; hosted connections retain TLS.
+  ssl: /^postgres(?:ql)?:\/\/(?:[^@/]+@)?(?:localhost|127\.0\.0\.1|\[::1\])(?=[:/])/i.test(process.env.DB_URL)
+    ? false : { rejectUnauthorized: false },
   types: {
     getTypeParser(oid, format) {
       // PostgreSQL DATE is a calendar day, not an instant in the server's timezone.

@@ -1,3 +1,4 @@
+import { mockAdminLookup, authenticatedAdminClient } from './admin-client.js';
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -29,6 +30,7 @@ before(async () => {
     if (/FROM organization/.test(sql)) return { rows: [organization] };
     return { rows: [] };
   };
+  db.query = mockAdminLookup(db.query);
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   base = `http://127.0.0.1:${server.address().port}`;
@@ -41,17 +43,13 @@ after(async () => {
 });
 
 const client = () => {
-  let cookie = '';
+  const adminRequest = authenticatedAdminClient(base);
   return async (path, { data, rawBody, headers = {} } = {}) => {
-    const response = await fetch(base + path, {
+    return adminRequest(path, {
       method: data || rawBody !== undefined ? 'POST' : 'GET',
-      redirect: 'manual',
-      headers: { ...(cookie ? { cookie } : {}), ...(data || rawBody !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}), ...headers },
+      headers: { ...(data || rawBody !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}), ...headers },
       body: data ? new URLSearchParams(data) : rawBody
     });
-    const setCookie = response.headers.get('set-cookie');
-    if (setCookie) cookie = setCookie.split(';')[0];
-    return { status: response.status, html: await response.text(), headers: response.headers };
   };
 };
 const openForm = async (request, path = '/new-organization') => {
