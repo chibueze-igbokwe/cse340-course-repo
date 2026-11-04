@@ -1,0 +1,45 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <h1>Register</h1>
+  <p class="intro">Create your Service Network account. All fields are required.</p>
+  <% if (formError || Object.keys(errors).length) { %>
+    <section class="alert error" role="alert" aria-labelledby="registration-errors-title">
+      <h2 id="registration-errors-title">We could not create your account</h2>
+      <% if (formError) { %><p><%= formError %></p><% } %>
+      <% if (Object.keys(errors).length) { %>
+        <ul>
+          <% Object.entries(errors).forEach(([field, message]) => { %>
+            <li><a href="#<%= field %>"><%= message %></a></li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+  <% } %>
+  <form class="registration-form" action="/register" method="POST">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-group">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" value="<%= name %>" maxlength="100" autocomplete="name" required
+        aria-invalid="<%= Boolean(errors.name) %>"<% if (errors.name) { %> aria-describedby="name-error"<% } %>>
+      <% if (errors.name) { %><p class="field-error" id="name-error"><%= errors.name %></p><% } %>
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" value="<%= email %>" maxlength="100" autocomplete="email" required
+        aria-invalid="<%= Boolean(errors.email) %>"<% if (errors.email) { %> aria-describedby="email-error"<% } %>>
+      <% if (errors.email) { %><p class="field-error" id="email-error"><%= errors.email %></p><% } %>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <p class="field-help" id="password-help">Use at least 8 characters and at most 72 UTF-8 bytes. Non-ASCII characters can use more than one byte. Re-enter your password if the form has errors.</p>
+      <input type="password" id="password" name="password" minlength="8" maxlength="72" autocomplete="new-password" required
+        aria-invalid="<%= Boolean(errors.password) %>" aria-describedby="password-help<%= errors.password ? ' password-error' : '' %>">
+      <% if (errors.password) { %><p class="field-error" id="password-error"><%= errors.password %></p><% } %>
+    </div>
+    <div class="actions">
+      <button class="button" type="submit">Register</button>
+      <a href="/">Cancel</a>
+    </div>
+  </form>
+</main>
+<%- include('partials/footer') %>

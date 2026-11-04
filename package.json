@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --import ./tests/setup-env.js --test tests/week03.test.js tests/development.test.js tests/dates.test.js tests/week04.test.js tests/project-forms.test.js tests/category-forms.test.js",
-    "test:integration": "node --import ./tests/setup-env.js --test tests/integration.test.js",
+    "test": "node --import ./tests/setup-unit-env.js --test tests/week03.test.js tests/development.test.js tests/dates.test.js tests/week04.test.js tests/project-forms.test.js tests/category-forms.test.js tests/registration.test.js",
+    "test:integration": "node --import ./tests/setup-integration-env.js --test tests/integration.test.js",
     "check": "node scripts/check.js"
   },
   "repository": {
@@ -19,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^18.0.9",
     "ejs": "^7.0.2",
     "express": "^5.3.0",

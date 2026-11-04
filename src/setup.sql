@@ -1,13 +1,9 @@
--- CSE340 Week 02: Service Network database setup
--- Run in pgAdmin Query Tool against your CSE340 database.
--- WARNING: Re-running this script resets these four course tables and their data.
+-- CSE340 Weeks 02–05: Service Network development database setup.
+-- Run ONLY against a confirmed isolated, fresh development database.
+-- Existing tables cause this transaction to fail rather than resetting data.
+-- Never run against the Render database used for earlier-week grading.
 
 BEGIN;
-
-DROP TABLE IF EXISTS project_category;
-DROP TABLE IF EXISTS category;
-DROP TABLE IF EXISTS project;
-DROP TABLE IF EXISTS organization;
 
 CREATE TABLE organization (
     organization_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -36,6 +32,25 @@ CREATE TABLE project_category (
     category_id INTEGER NOT NULL REFERENCES category(category_id) ON DELETE CASCADE,
     PRIMARY KEY (project_id, category_id)
 );
+
+CREATE TABLE roles (
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) UNIQUE NOT NULL,
+    role_description TEXT
+);
+
+CREATE TABLE users (
+    user_id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role_id INTEGER REFERENCES roles(role_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO roles (role_name, role_description) VALUES
+('user', 'Registered Service Network user'),
+('admin', 'Service Network administrator');
 
 INSERT INTO organization (name, description, email, logo) VALUES
 ('Community Care Network', 'Connects volunteers with neighborhood support initiatives.', 'hello@communitycare.example', 'community.svg'),
@@ -74,11 +89,14 @@ INSERT INTO project_category (project_id, category_id) VALUES
 
 COMMIT;
 
--- Verification: expect 3 organizations, 15 projects, 5 categories, 21 links.
+-- Verification on a fresh database: 3 organizations, 15 projects, 5 categories,
+-- 21 links, 2 roles, and 0 users. No default user accounts/passwords are seeded.
 SELECT 'organization' AS table_name, COUNT(*) AS row_count FROM organization
 UNION ALL SELECT 'project', COUNT(*) FROM project
 UNION ALL SELECT 'category', COUNT(*) FROM category
-UNION ALL SELECT 'project_category', COUNT(*) FROM project_category;
+UNION ALL SELECT 'project_category', COUNT(*) FROM project_category
+UNION ALL SELECT 'roles', COUNT(*) FROM roles
+UNION ALL SELECT 'users', COUNT(*) FROM users;
 
 -- Verification: should return no rows (every project has at least one category).
 SELECT p.project_id, p.title

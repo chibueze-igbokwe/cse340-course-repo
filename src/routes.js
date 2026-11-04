@@ -17,9 +17,14 @@ import {
 import { testErrorPage } from './controllers/errors.js';
 import { validateResourceId } from './middleware/validate-resource-id.js';
 import { requireFormToken } from './middleware/csrf.js';
+import {
+  showUserRegistrationForm, processUserRegistrationForm, userRegistrationValidation
+} from './controllers/users.js';
 
 const router = express.Router();
 router.get('/', showHomePage);
+router.get('/register', showUserRegistrationForm);
+router.post('/register', requireFormToken, userRegistrationValidation, processUserRegistrationForm);
 router.get('/organizations', showOrganizationsPage);
 router.get('/organization/:id', validateResourceId, showOrganizationDetailsPage);
 router.get('/new-organization', showNewOrganizationForm);

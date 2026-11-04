@@ -11,7 +11,7 @@ A server-rendered community service directory using Express 5, EJS, and PostgreS
 5. Run `npm start` or `npm run dev`.
 
 The existing database connection uses TLS. No schema migration is required for Week 03.
-`src/setup.sql` documents and seeds the Week 02 schema; **running it again drops and recreates the course tables**. Do not run it against an existing database just to install these changes.
+As of Week 05, `src/setup.sql` initializes a **fresh, isolated development database** with the original course data plus roles/users. It does not drop existing tables. An existing table causes the setup transaction to fail instead of resetting data. Do not run it against the Render database used for grading earlier weeks.
 
 ## Week 03 structure
 
@@ -72,7 +72,7 @@ All dynamic SQL values use placeholders. Views escape database text with `<%= ..
 | `npm test` | `tests/week03.test.js` checks model parameter binding, all routes, reciprocal links, escaping, invalid/missing IDs, empty states, database failures, production error privacy, CSS, and all three static SVG logos; `tests/development.test.js` checks development middleware and escaped diagnostics; `tests/dates.test.js` renders all four project-date pages in UTC, Lagos, Los Angeles, and Kiritimati, including year boundaries, leap day, and daylight-saving transition dates |
 | `npm run test:integration` | `tests/integration.test.js` makes read-only queries to the configured database and verifies actual records, exact category relationships against the join table, dates against independent SQL formatting, upcoming-project limits, HTTP routes, database logo filenames and served image bytes, and error responses. A SELECT-only CTE fixture exercises yesterday/today boundaries, ordering, and limits without modifying database records |
 
-No lint tool was configured in the original repository; the `check` command is a syntax/template check, not a lint claim. Tests use Node's built-in test runner without a separate test framework. Integration checks require network access to the existing database. No integration test resets or modifies stored data.
+No lint tool was configured in the original repository; the `check` command is a syntax/template check, not a lint claim. Tests use Node's built-in test runner without a separate test framework. As of Week 05, integration checks require an explicitly confirmed isolated development target; the normal `DB_URL` is never used as a fallback. No integration test resets or modifies stored data.
 
 ## Week 04 foundation and organization forms
 
@@ -114,7 +114,7 @@ New and changed Week 04 files:
 - `tests/integration.test.js`: existing read-only checks plus GET-only Week 04 forms, real database field values, placeholder image, and file-backed production sessions. No real INSERT/UPDATE is attempted.
 - `tests/dates.test.js`: keeps its organization fixture consistent with the existing schema.
 
-Run `npm run check`, `npm test`, and (with database connectivity) `npm run test:integration`. Automated create/update tests mock the database; a successful live database INSERT/UPDATE is deliberately not claimed. Browser visual/keyboard checks and live write/deployment checks remain separate.
+Run `npm run check`, `npm test`, and (only with a confirmed isolated development database) `npm run test:integration`. Automated create/update tests mock the database; a successful live database INSERT/UPDATE is deliberately not claimed. Browser visual/keyboard checks and live write/deployment checks remain separate.
 
 ## Week 04 service projects and category assignments
 
@@ -207,6 +207,51 @@ Reviewed against the [official Week 04 assignment](https://byui-cse.github.io/cs
 
 Write tests use mocks; live integration tests issue read-only queries and GET requests. Passing these tests does not claim successful live INSERT/UPDATE operations, Render deployment, or a guaranteed grade. No reset, reseed, schema migration, or modification to stored records is performed. `main` and `week03-mvc` remain protected from this work.
 
-## Hosting verification before submission
+## Week 05 Phase 1: database setup and registration
+
+This phase follows the course's [Hashing and User Registration activity](https://byui-cse.github.io/cse340-ww-course-v2/week05/prepare-register.html). The current work stays on `week05-authentication`. It does not implement login, logout, dashboard access rules, or an admin users page, and does not deploy or change Render configuration.
+
+`src/setup.sql` retains the four original tables, their constraints, relationships, and seed data. It adds `roles` (`role_id SERIAL`, unique required `role_name VARCHAR(50)`, optional description) and `users` (`user_id SERIAL`, required name/email up to 100 characters, unique email, required password hash up to 255, role foreign key, and creation timestamp defaulting to `CURRENT_TIMESTAMP`). It seeds only `user` and `admin` roles; no accounts or passwords are seeded. The script has not been executed for this phase. All CREATE statements are inside the original transaction; there are no reset/drop statements.
+
+| Route | Behavior |
+| --- | --- |
+| `GET /register` | Accessible name/email/password form with session-bound CSRF token |
+| `POST /register` | Validate, hash with `bcrypt.hash(password, 10)`, create a normal user, flash success, redirect HTTP 303 to `/` |
+
+The controller names are `showUserRegistrationForm` and `processUserRegistrationForm`; registration routes use the existing `src/routes.js`, matching the course convention. `createUser(name, email, passwordHash)` uses a parameterized INSERT/SELECT and resolves the `user` role by name. Submitted role fields are ignored. If the default role is absent, no role-less user is inserted and the request fails safely.
+
+Validation trims names and email addresses, requires name 1–100 characters and a valid email up to 100 characters, and lowercases email account identifiers consistently before insertion. Passwords require at least eight characters and at most 72 UTF-8 bytes to avoid bcrypt truncation; passwords are never trimmed or normalized. Repeated scalar fields and invalid types are rejected. Names reject NUL characters, and passwords reject NUL bytes. Native form validation provides immediate feedback; server validation remains authoritative.
+
+Invalid fields return HTTP 422; duplicate emails return HTTP 409. Name/email values are retained and escaped in the form, while password fields always render empty. Hash/database errors return safe retry feedback without logging sensitive error details. Neither passwords nor hashes are placed in flash messages, session data, or rendered HTML. Registration does not authenticate the session. Existing session, CSRF, flash, responsive form styles, and focus feedback are reused. Navigation includes Register.
+
+### Database isolation and manual setup
+
+Only the existing `DB_URL` was configured during this work. It has not been treated as a safe development database and no connection to it was made for testing. No separate database was created, reset, seeded, or modified. Render environment variables and deployment were untouched.
+
+To test registration with PostgreSQL later:
+
+1. Create or select a separate, empty PostgreSQL development database and independently confirm its host/database are not the earlier-week grading target. The existing connection configuration requires TLS support.
+2. Only after confirming that isolated target, initialize it with `src/setup.sql`. Do not run this script on an existing grading database. The script intentionally fails if course tables already exist; it is not an upgrade/reset script.
+3. For local development, set `DB_URL` in the ignored local `.env` to that confirmed development target, retain a private `SESSION_SECRET`, and use `NODE_ENV=development` for local HTTP. Do not change the Render environment or commit any credentials.
+4. To run the optional read-only integration suite, separately set `DEV_DB_URL` to the confirmed development database and `CONFIRM_ISOLATED_DATABASE=true` in the local environment. This can be the same isolated database used by the local app. The test preloader uses only `DEV_DB_URL`; without both values it stops before importing the application or connecting. The confirmation is an explicit operator assertion, not automatic proof that a host is safe.
+5. Verify actual registration and stored password hashes only on that isolated database. These live-write checks, schema initialization, and browser interaction have not been performed in this phase.
+
+`npm test` uses `tests/setup-unit-env.js` to replace inherited database configuration and disable real pg connections, so a missing query mock cannot reach the grading database. `tests/setup-integration-env.js` supplies the separate opt-in gate for integration checks. Ephemeral session secrets remain test-only. Do not run the integration test file directly to bypass its preloader.
+
+`tests/registration.test.js` checks GET/POST rendering, real bcrypt cost/hash/compare, password byte boundaries and whitespace preservation, invalid/missing/repeated inputs, default-role enforcement, SQL parameter binding, duplicate-email errors, missing-role/hash/database failures, CSRF, escaped values, redacted logs, one-time flashes, and the isolation gate. Existing Week 03/04 tests still run. No PostgreSQL integration success or fresh schema initialization is claimed without a safe target.
+
+Changed files for Phase 1:
+
+- `src/setup.sql`: fresh-development setup, roles/users, role seeds, preserved original schema/data.
+- `src/models/users.js`: parameterized `createUser` with enforced normal-user role.
+- `src/controllers/users.js`: registration controllers, validation, bcrypt, safe feedback and redirect.
+- `src/routes.js`: registration GET/POST with CSRF and validation.
+- `views/register.ejs`, `views/partials/header.ejs`, `public/css/style.css`: accessible styled form and Register link.
+- `package.json`, `package-lock.json`: bcrypt dependency and offline/gated test commands.
+- `tests/registration.test.js`, `tests/setup-unit-env.js`, `tests/setup-integration-env.js`: registration coverage and database isolation.
+- `.env.example`: empty development target/confirmation settings without credentials.
+- `README.md`: Phase 1 behavior, verification limits, and manual isolated-database setup.
+
+## Hosting verification before submission (future work; not Phase 1)
 
 Push the checked commit, confirm Render deploys the intended branch and commit, and verify the live home/list/detail routes, reciprocal links, logos, CSS, 404s, and `/test-error` HTTP 500 response. Check mobile layout and keyboard navigation in a browser. Ensure `DB_URL` is configured and `NODE_ENV=production` hides error details. A local HTTP/integration test does not establish successful Render deployment or guarantee a course grade.
