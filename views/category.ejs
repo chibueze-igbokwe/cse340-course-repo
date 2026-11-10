@@ -1,0 +1,11 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/categories">All categories</a></p>
+  <p class="eyebrow">Find your cause</p>
+  <h1><%= category.name %></h1>
+  <section aria-labelledby="category-projects">
+    <h2 id="category-projects">Service projects</h2>
+    <%- include('partials/project-list', { projects }) %>
+  </section>
+</main>
+<%- include('partials/footer') %>
