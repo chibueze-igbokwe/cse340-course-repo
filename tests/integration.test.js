@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { once } from 'node:events';
+import { extname } from 'node:path';
+import ejs from 'ejs';
 
 process.env.NODE_ENV = 'production';
 const { default: db } = await import('../src/models/db.js');
@@ -47,7 +49,8 @@ test('read-only verification against the configured PostgreSQL database and loca
         assert.ok(html.includes(`src="/images/${organization.logo}"`));
         const logoResponse = await fetch(`${base}/images/${organization.logo}`);
         assert.equal(logoResponse.status, 200);
-        assert.match(logoResponse.headers.get('content-type'), /image\/svg\+xml/);
+        const imageTypes = { '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
+        assert.ok(logoResponse.headers.get('content-type').startsWith(imageTypes[extname(organization.logo).toLowerCase()]));
         assert.deepEqual(Buffer.from(await logoResponse.arrayBuffer()), readFileSync(`public/images/${organization.logo}`));
         assert.deepEqual(sorted(projectLinks(html)), sorted(linked.map((p) => p.project_id)));
         for (const project of linked) {
@@ -86,6 +89,99 @@ test('read-only verification against the configured PostgreSQL database and loca
         }
       }
       console.log(`Verified ${organizations.length} organizations, ${projects.length} projects, ${categories.length} categories and their detail routes.`);
+    });
+
+    await t.test('Week 04 GET forms use real organization fields and production sessions without writing database records', async () => {
+      const response = await fetch(base + '/new-organization', { headers: { 'X-Forwarded-Proto': 'https' } });
+      assert.equal(response.status, 200);
+      const cookie = response.headers.get('set-cookie');
+      assert.match(cookie, /HttpOnly/);
+      assert.match(cookie, /Secure/);
+      assert.match(cookie, /SameSite=Lax/);
+      const html = await response.text();
+      const token = html.match(/name="_csrf" value="([a-f0-9]{64})"/)[1];
+      assert.match(html, /action="\/new-organization" method="POST"/);
+      for (const organization of await organizationsModel.getAllOrganizations()) {
+        const edit = await fetch(`${base}/edit-organization/${organization.organization_id}`, {
+          headers: { 'X-Forwarded-Proto': 'https', Cookie: cookie.split(';')[0] }
+        });
+        assert.equal(edit.status, 200);
+        const editHtml = await edit.text();
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(organization.name)}"`));
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(organization.email)}"`));
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(organization.logo)}"`));
+        assert.ok(editHtml.includes(`${ejs.escapeXML(organization.description)}</textarea>`));
+        assert.ok(editHtml.includes(`value="${token}"`), 'File-backed session must retain the form token across requests');
+      }
+      for (const id of ['abc', '0', '2147483648', '2147483647']) await get('/edit-organization/' + id, 404);
+      const placeholder = await fetch(base + '/images/placeholder-logo.png');
+      assert.equal(placeholder.status, 200);
+      assert.match(placeholder.headers.get('content-type'), /image\/png/);
+      assert.deepEqual(Buffer.from(await placeholder.arrayBuffer()), readFileSync('public/images/placeholder-logo.png'));
+      // Intentionally no valid POST requests to the real database.
+    });
+
+    await t.test('project create/edit and assignment GET forms match real dates, organizations and category links', async () => {
+      const response = await fetch(base + '/new-project', { headers: { 'X-Forwarded-Proto': 'https' } });
+      assert.equal(response.status, 200);
+      const cookie = response.headers.get('set-cookie').split(';')[0];
+      const newHtml = await response.text();
+      assert.match(newHtml, /action="\/new-project" method="POST"/);
+      const organizations = await organizationsModel.getAllOrganizations();
+      const categories = await categoriesModel.getAllCategories();
+      const { rows: links } = await db.query('SELECT project_id, category_id FROM project_category');
+      for (const organization of organizations) {
+        assert.ok(newHtml.includes(`value="${organization.organization_id}">${ejs.escapeXML(organization.name)}</option>`));
+      }
+      const formGet = async (path) => {
+        const page = await fetch(base + path, { headers: { 'X-Forwarded-Proto': 'https', Cookie: cookie } });
+        assert.equal(page.status, 200, path);
+        return page.text();
+      };
+      for (const project of await projectsModel.getAllProjects()) {
+        const editHtml = await formGet(`/edit-project/${project.project_id}`);
+        assert.ok(editHtml.includes(`value="${project.date}"`));
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(project.title)}"`));
+        assert.ok(editHtml.includes(`value="${project.organization_id}" selected>`));
+        const assignmentsHtml = await formGet(`/assign-categories/${project.project_id}`);
+        const checked = [...assignmentsHtml.matchAll(/name="categoryIds" value="(\d+)" checked/g)].map((match) => Number(match[1]));
+        const expected = links.filter((link) => link.project_id === project.project_id).map((link) => link.category_id);
+        assert.deepEqual(sorted(checked), sorted(expected));
+        for (const category of categories) {
+          assert.ok(assignmentsHtml.includes(`for="category-${category.category_id}">${ejs.escapeXML(category.name)}</label>`));
+        }
+      }
+      for (const route of ['/edit-project/', '/assign-categories/']) {
+        for (const id of ['abc', '0', '-1', '2147483648', '2147483647']) await get(route + id, 404);
+      }
+      assert.match(await get('/projects'), /href="\/new-project"/);
+      // No POST requests: shared project and relationship records are untouched.
+    });
+
+    await t.test('category forms prepopulate real names, expose only the required browser constraints and preserve sessions', async () => {
+      const response = await fetch(base + '/new-category', { headers: { 'X-Forwarded-Proto': 'https' } });
+      assert.equal(response.status, 200);
+      const cookie = response.headers.get('set-cookie').split(';')[0];
+      const newHtml = await response.text();
+      const token = newHtml.match(/name="_csrf" value="([a-f0-9]{64})"/)[1];
+      assert.match(newHtml, /action="\/new-category" method="POST"/);
+      assert.match(newHtml, /maxlength="100" required/);
+      assert.doesNotMatch(newHtml, /\bminlength\s*=|\bpattern\s*=|<script\b/i);
+      assert.match(await get('/categories'), /href="\/new-category"/);
+      for (const category of await categoriesModel.getAllCategories()) {
+        const edit = await fetch(`${base}/edit-category/${category.category_id}`, {
+          headers: { 'X-Forwarded-Proto': 'https', Cookie: cookie }
+        });
+        assert.equal(edit.status, 200);
+        const editHtml = await edit.text();
+        assert.ok(editHtml.includes(`value="${ejs.escapeXML(category.name)}"`));
+        assert.ok(editHtml.includes(`action="/edit-category/${category.category_id}" method="POST"`));
+        assert.ok(editHtml.includes(`value="${token}"`));
+        assert.doesNotMatch(editHtml, /\bminlength\s*=|\bpattern\s*=|<script\b/i);
+        assert.ok((await get(`/category/${category.category_id}`)).includes(`href="/edit-category/${category.category_id}"`));
+      }
+      for (const id of ['abc', '0', '-1', '2147483648', '2147483647']) await get('/edit-category/' + id, 404);
+      // Deliberately GET-only; category creation and updates use mocks in unit tests.
     });
 
     await t.test('actual upcoming SQL includes today, excludes yesterday, sorts and limits read-only fixtures', async () => {

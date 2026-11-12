@@ -1,0 +1,8 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/projects">Upcoming service projects</a></p>
+  <h1>Add New Service Project</h1>
+  <p class="intro">Enter the project details and choose its organization. All fields are required. You can assign categories from the project details page after saving.</p>
+  <%- include('partials/project-form', { editing: false }) %>
+</main>
+<%- include('partials/footer') %>

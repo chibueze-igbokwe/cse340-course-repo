@@ -1,0 +1,21 @@
+<% if (formError || errors.name) { %>
+  <section class="alert error" role="alert" aria-labelledby="form-errors-title">
+    <h2 id="form-errors-title">We could not save your changes</h2>
+    <% if (formError) { %><p><%= formError %></p><% } %>
+    <% if (errors.name) { %><p><a href="#name"><%= errors.name %></a></p><% } %>
+  </section>
+<% } %>
+<form class="category-form" action="<%= editing ? '/edit-category/' + categoryId : '/new-category' %>" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="form-group">
+    <label for="name">Category name</label>
+    <p class="field-help" id="name-help">Required. Use up to 100 characters.</p>
+    <input type="text" id="name" name="name" value="<%= name %>" maxlength="100" required
+      aria-invalid="<%= Boolean(errors.name) %>" aria-describedby="name-help<%= errors.name ? ' name-error' : '' %>">
+    <% if (errors.name) { %><p class="field-error" id="name-error"><%= errors.name %></p><% } %>
+  </div>
+  <div class="actions">
+    <button class="button" type="submit"><%= editing ? 'Update Category' : 'Create Category' %></button>
+    <a href="<%= editing ? '/category/' + categoryId : '/categories' %>">Cancel</a>
+  </div>
+</form>

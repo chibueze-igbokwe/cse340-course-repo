@@ -35,12 +35,19 @@ for (const [timezone, offset] of [['UTC', 0], ['Africa/Lagos', -60], ['America/L
           const project = { project_id: 1, organization_id: 1, organization_name: 'Organization', title: 'Project', description: 'Description', location: 'Location', date: parsed };
           const locals = {
             title: 'Date test', pageHeading: 'Upcoming Service Projects', NODE_ENV: 'production', project, projects: [project],
-            categories: [], category: { name: 'Category' },
-            organizationDetails: { name: 'Organization', description: 'Description', logo: 'community.svg', email: 'hello@example.com' }
+            categories: [], category: { category_id: 1, name: 'Category' },
+            organizationDetails: { organization_id: 1, name: 'Organization', description: 'Description', logo: 'community.svg', email: 'hello@example.com' }
           };
           for (const view of ['projects', 'project', 'organization', 'category']) {
             assert.ok((await render(view, locals)).includes(expected), view + ': ' + date + ' must display ' + expected);
           }
+          const editHtml = await render('edit-project', {
+            ...locals, projectId: 1, csrfToken: 'test-only-token', errors: {}, formError: '',
+            organizations: [{ organization_id: 1, name: 'Organization' }],
+            values: { title: 'Project', description: 'Description', location: 'Location', date: parsed, organizationId: '1' }
+          });
+          assert.ok(editHtml.includes('value="' + date + '"'), 'Date input must retain the exact PostgreSQL calendar day');
+          assert.ok(editHtml.includes('value="1" selected>Organization'), 'Edit form must select the current organization');
         }
         await db.end();
       `

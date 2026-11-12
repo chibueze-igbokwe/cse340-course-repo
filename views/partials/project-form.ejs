@@ -1,0 +1,62 @@
+<% if (formError || Object.keys(errors).length) { %>
+  <section class="alert error" role="alert" aria-labelledby="form-errors-title">
+    <h2 id="form-errors-title">We could not save your changes</h2>
+    <% if (formError) { %><p><%= formError %></p><% } %>
+    <% if (Object.keys(errors).length) { %>
+      <ul>
+        <% Object.entries(errors).forEach(([field, message]) => { %>
+          <li><a href="#<%= field %>"><%= message %></a></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+<% } %>
+<% if (!organizations.length) { %>
+  <p class="alert">Add an organization before saving a project. <a href="/new-organization">Add a new organization</a>.</p>
+<% } %>
+<form class="project-form" action="<%= editing ? '/edit-project/' + projectId : '/new-project' %>" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="form-group">
+    <label for="title">Project title</label>
+    <p class="field-help" id="title-help">Use 3 to 200 characters.</p>
+    <input type="text" id="title" name="title" value="<%= values.title %>" minlength="3" maxlength="200" required
+      aria-invalid="<%= Boolean(errors.title) %>" aria-describedby="title-help<%= errors.title ? ' title-error' : '' %>">
+    <% if (errors.title) { %><p class="field-error" id="title-error"><%= errors.title %></p><% } %>
+  </div>
+  <div class="form-group">
+    <label for="description">Description</label>
+    <p class="field-help" id="description-help">Use up to 1,000 characters.</p>
+    <textarea id="description" name="description" rows="6" maxlength="1000" required
+      aria-invalid="<%= Boolean(errors.description) %>" aria-describedby="description-help<%= errors.description ? ' description-error' : '' %>"><%= values.description %></textarea>
+    <% if (errors.description) { %><p class="field-error" id="description-error"><%= errors.description %></p><% } %>
+  </div>
+  <div class="form-group">
+    <label for="location">Location</label>
+    <input type="text" id="location" name="location" value="<%= values.location %>" maxlength="200" required
+      aria-invalid="<%= Boolean(errors.location) %>"<% if (errors.location) { %> aria-describedby="location-error"<% } %>>
+    <% if (errors.location) { %><p class="field-error" id="location-error"><%= errors.location %></p><% } %>
+  </div>
+  <div class="form-group">
+    <label for="date">Date</label>
+    <input type="date" id="date" name="date" value="<%= values.date %>" min="0001-01-01" max="9999-12-31" required
+      aria-invalid="<%= Boolean(errors.date) %>"<% if (errors.date) { %> aria-describedby="date-error"<% } %>>
+    <% if (errors.date) { %><p class="field-error" id="date-error"><%= errors.date %> Entered date: <%= values.date %></p><% } %>
+  </div>
+  <div class="form-group">
+    <label for="organizationId">Organization</label>
+    <select id="organizationId" name="organizationId" required aria-invalid="<%= Boolean(errors.organizationId) %>"<% if (errors.organizationId) { %> aria-describedby="organizationId-error"<% } %>>
+      <option value="">Select an organization</option>
+      <% if (values.organizationId && !organizations.some((org) => org.organization_id === Number(values.organizationId))) { %>
+        <option value="<%= values.organizationId %>" selected disabled>Unavailable organization (<%= values.organizationId %>)</option>
+      <% } %>
+      <% organizations.forEach((organization) => { %>
+        <option value="<%= organization.organization_id %>"<%= organization.organization_id === Number(values.organizationId) ? ' selected' : '' %>><%= organization.name %></option>
+      <% }) %>
+    </select>
+    <% if (errors.organizationId) { %><p class="field-error" id="organizationId-error"><%= errors.organizationId %></p><% } %>
+  </div>
+  <div class="actions">
+    <button class="button" type="submit"<%= !organizations.length ? ' disabled' : '' %>><%= editing ? 'Update Project' : 'Create Project' %></button>
+    <a href="<%= editing ? '/project/' + projectId : '/projects' %>">Cancel</a>
+  </div>
+</form>

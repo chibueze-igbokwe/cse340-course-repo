@@ -1,5 +1,30 @@
 import db from './db.js';
 
+export const createProject = async (title, description, location, date, organizationId) => {
+  const result = await db.query(`
+    INSERT INTO project (title, description, location, date, organization_id)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING project_id
+  `, [title, description, location, date, organizationId]);
+  if (!result.rows.length) throw new Error('Failed to create project');
+  return result.rows[0].project_id;
+};
+
+export const updateProject = async (id, title, description, location, date, organizationId) => {
+  const result = await db.query(`
+    UPDATE project
+    SET title = $1, description = $2, location = $3, date = $4, organization_id = $5
+    WHERE project_id = $6
+    RETURNING project_id
+  `, [title, description, location, date, organizationId, id]);
+  if (!result.rows.length) {
+    const error = new Error('Project not found');
+    error.status = 404;
+    throw error;
+  }
+  return result.rows[0].project_id;
+};
+
 export const getAllProjects = async () => {
   const result = await db.query(`
     SELECT p.project_id, p.organization_id, p.title, p.description, p.location, p.date,
