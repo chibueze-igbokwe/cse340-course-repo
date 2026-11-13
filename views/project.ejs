@@ -3,7 +3,9 @@
   <p><a href="/projects">Upcoming service projects</a></p>
   <h1><%= project.title %></h1>
   <p class="intro"><%= project.description %></p>
+  <% if (isAdmin) { %>
   <p><a href="/edit-project/<%= project.project_id %>">Edit <%= project.title %></a></p>
+  <% } %>
   <dl class="project-details">
     <dt>Date</dt>
     <dd><%= formatProjectDate(project.date) %></dd>
@@ -14,7 +16,9 @@
   </dl>
   <section aria-labelledby="project-categories">
     <h2 id="project-categories">Categories</h2>
+  <% if (isAdmin) { %>
     <p><a href="/assign-categories/<%= project.project_id %>">Edit categories for <%= project.title %></a></p>
+  <% } %>
     <% if (categories.length === 0) { %>
       <p>No categories have been assigned to this project yet.</p>
     <% } else { %>

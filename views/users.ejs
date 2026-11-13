@@ -1,0 +1,17 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/dashboard">My Dashboard</a></p>
+  <h1>Registered Users</h1>
+  <% if (!users.length) { %><p>No registered users are available.</p><% } else { %>
+    <div class="table-scroll">
+      <table>
+        <caption>Registered Service Network accounts and their roles</caption>
+        <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th></tr></thead>
+        <tbody><% users.forEach((user) => { %>
+          <tr><td><%= user.name %></td><td><%= user.email %></td><td><%= user.role_name %></td></tr>
+        <% }) %></tbody>
+      </table>
+    </div>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

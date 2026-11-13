@@ -1,5 +1,6 @@
 <%- include('partials/header') %>
 <main id="main-content">
+  <% if (isLoggedIn) { %><p class="container"><a href="/dashboard">My Dashboard</a></p><% } %>
   <section class="hero"><div class="container hero-content">
     <p class="eyebrow">Small actions. Stronger communities.</p>
     <h1>Find your place to make a difference.</h1>

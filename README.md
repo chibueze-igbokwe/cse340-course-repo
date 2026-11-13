@@ -11,7 +11,7 @@ A server-rendered community service directory using Express 5, EJS, and PostgreS
 5. Run `npm start` or `npm run dev`.
 
 The existing database connection uses TLS. No schema migration is required for Week 03.
-`src/setup.sql` documents and seeds the Week 02 schema; **running it again drops and recreates the course tables**. Do not run it against an existing database just to install these changes.
+As of Week 05, `src/setup.sql` initializes a **fresh, isolated development database** with the original course data plus roles/users. It does not drop existing tables. An existing table causes the setup transaction to fail instead of resetting data. Do not run it against the Render database used for grading earlier weeks.
 
 ## Week 03 structure
 
@@ -72,7 +72,7 @@ All dynamic SQL values use placeholders. Views escape database text with `<%= ..
 | `npm test` | `tests/week03.test.js` checks model parameter binding, all routes, reciprocal links, escaping, invalid/missing IDs, empty states, database failures, production error privacy, CSS, and all three static SVG logos; `tests/development.test.js` checks development middleware and escaped diagnostics; `tests/dates.test.js` renders all four project-date pages in UTC, Lagos, Los Angeles, and Kiritimati, including year boundaries, leap day, and daylight-saving transition dates |
 | `npm run test:integration` | `tests/integration.test.js` makes read-only queries to the configured database and verifies actual records, exact category relationships against the join table, dates against independent SQL formatting, upcoming-project limits, HTTP routes, database logo filenames and served image bytes, and error responses. A SELECT-only CTE fixture exercises yesterday/today boundaries, ordering, and limits without modifying database records |
 
-No lint tool was configured in the original repository; the `check` command is a syntax/template check, not a lint claim. Tests use Node's built-in test runner without a separate test framework. Integration checks require network access to the existing database. No integration test resets or modifies stored data.
+No lint tool was configured in the original repository; the `check` command is a syntax/template check, not a lint claim. Tests use Node's built-in test runner without a separate test framework. Week 05 integration checks accept only local `cse340_development`: the authentication suite uses tracked write fixtures and retains the grading admin account, while the legacy read-only suite uses SELECT queries only. Neither suite drops or recreates a database.
 
 ## Week 04 foundation and organization forms
 
@@ -114,7 +114,7 @@ New and changed Week 04 files:
 - `tests/integration.test.js`: existing read-only checks plus GET-only Week 04 forms, real database field values, placeholder image, and file-backed production sessions. No real INSERT/UPDATE is attempted.
 - `tests/dates.test.js`: keeps its organization fixture consistent with the existing schema.
 
-Run `npm run check`, `npm test`, and (with database connectivity) `npm run test:integration`. Automated create/update tests mock the database; a successful live database INSERT/UPDATE is deliberately not claimed. Browser visual/keyboard checks and live write/deployment checks remain separate.
+Run `npm run check`, `npm test`, and (only with a confirmed isolated development database) `npm run test:integration`. Automated create/update tests mock the database; a successful live database INSERT/UPDATE is deliberately not claimed. Browser visual/keyboard checks and live write/deployment checks remain separate.
 
 ## Week 04 service projects and category assignments
 
@@ -207,6 +207,62 @@ Reviewed against the [official Week 04 assignment](https://byui-cse.github.io/cs
 
 Write tests use mocks; live integration tests issue read-only queries and GET requests. Passing these tests does not claim successful live INSERT/UPDATE operations, Render deployment, or a guaranteed grade. No reset, reseed, schema migration, or modification to stored records is performed. `main` and `week03-mvc` remain protected from this work.
 
-## Hosting verification before submission
+## Week 05: authentication and authorization
+
+Phase 1 added the roles/users schema and registration. The local PostgreSQL development database is now initialized independently; no setup, reset, or reseed is run by the tests. The existing course data is preserved. This branch completes the course login, protected routes, admin role, and registered-users activities. No deployment or merge is performed.
+
+### Routes and behavior
+
+| Route | Access and behavior |
+| --- | --- |
+| GET/POST /register | Public; parameterized normal-user registration with bcrypt cost 10, CSRF, validation, duplicate feedback and success flash |
+| GET/POST /login | Public; validated email/password, bcrypt comparison, generic invalid-credentials message, regenerated session, success redirect to dashboard |
+| GET /logout | Logged-in confirmation page; does not change authentication |
+| POST /logout | Logged-in and CSRF-protected; destroys the old session through regeneration, creates a fresh anonymous session for the flash, redirects to login |
+| GET /dashboard | Requires login; displays escaped user name and email |
+| GET /users | Requires login and admin role; displays joined user name, email and role only |
+| All organization/project/category create/edit GET/POST routes | Admin only, before validation or database work; POST routes also require CSRF |
+| GET/POST /assign-categories/:projectId | Admin only; existing parameterized transaction and CSRF remain in place |
+
+The user model implements findUserByEmail, verifyPassword and authenticateUser using bcrypt.compare. Successful authentication returns only user_id, name, email and role_name; that explicit public object is placed in req.session.user. Password hashes are selected only for password verification, never stored in sessions or selected by getAllUsers. The users-list query joins users and roles and explicitly selects the public columns.
+
+requireLogin and requireRole(role) follow the course controller naming pattern in src/controllers/users.js. Anonymous requests redirect to login with a flash message. Non-admin requests redirect to the dashboard with an access-denied message. Management links and the Users dashboard link appear only for admins, including on request-error pages. Public directory/detail links remain available. The navigation shows Login/Register to guests and Dashboard/Logout to authenticated users. Dashboard and users responses use Cache-Control: no-store.
+
+The course login sample and prose differ about logout behavior and navigation. This implementation uses a POST logout with CSRF (GET shows confirmation), clears the entire old session, and follows the requested dashboard redirect. The registration minimum is now seven characters for everyone so the required grading account can use the standard registration/hash/compare workflow. There is no email-specific password exception or authentication bypass. Passwords remain limited to 72 UTF-8 bytes, are never trimmed, and always use bcrypt.hash(password, 10) on registration. Forms do not retain passwords. Errors preserve escaped name/email, and sensitive database details are not logged.
+
+### Local database and grading account
+
+The configured local target was verified as localhost / cse340_development with server address ::1. Both user and admin roles exist. Local loopback PostgreSQL connections disable TLS; hosted connections retain the existing TLS configuration. Render settings, database, and deployment were not accessed or changed.
+
+The grading account admin@example.com was created through POST /register, initially with the normal user role. A parameterized UPDATE then assigned the admin role. Verification confirmed that the supplied grading password matches a bcrypt cost-10 hash and that a real login has admin access. No plaintext grading password is stored in source, SQL, or this document. No default password or authentication bypass is seeded. The account is retained only in the local development database. A new login is required after changing roles because roles are stored in the session.
+
+### Verification and database safety
+
+- npm run check compiles all EJS templates and checks JavaScript syntax.
+- npm test runs offline with real pg connections disabled. Authentication tests cover bcrypt, SQL parameters, the safe session object, login/logout session and CSRF rotation, old-cookie replay, guest/user/admin permission matrices, hidden management links, safe errors, and the local database guard. Week 04 form tests now authenticate fixture admins through the real login route instead of bypassing permissions.
+- npm run test:integration runs the live auth suite first and then the existing read-only suite. Supply GRADING_ADMIN_PASSWORD privately in the command environment; do not commit it. DB_URL (or an optional DEV_DB_URL override) must resolve to localhost and database cse340_development. The preloader rejects any other target before application imports. Before every writing test, every POST, promotion, or cleanup query, verifyDevelopmentDatabase checks resolved connection settings, current_database(), and the actual loopback server address. Any mismatch aborts. Unit tests verify the guard rejects remote/wrong targets before a query.
+- Integration tests exercise real registration and stored hashes, duplicates, login success/failure, session rotation, logout invalidation, dashboard protection, every admin-only GET/POST, users-list access and hash exclusion, navigation, and successful organization/project/category/assignment writes. Only generated fixtures are cleaned up by captured IDs. The required grading account is retained. No database is dropped or recreated and no existing course record is edited/reset.
+- Read-only integration checks still verify the existing three organizations, fifteen projects, five categories, twenty-one relationships, dates, image files, forms, invalid IDs and errors, now using a real admin login and production-style cookies.
+
+No manual database initialization is needed for the already initialized local database. Use a private SESSION_SECRET and NODE_ENV=development for local HTTP. The optional DEV_DB_URL is a local override, not permission to target a hosted database. Tests never fall back to Render. The GRADING_ADMIN_PASSWORD environment value is required to rerun the live suite. If a grading account already exists with a different password, tests stop instead of silently resetting it.
+
+Changed areas for this continuation:
+
+- src/models/users.js: authentication functions, safe public user object and joined users list.
+- src/controllers/users.js: login/logout, dashboard/users controllers, requireLogin/requireRole, seven-character registration minimum.
+- src/routes.js: login/logout/dashboard/users routes and admin checks on all management routes.
+- server.js: shared login/role locals and logout CSRF token after session middleware.
+- src/models/db.js: local-loopback TLS compatibility while retaining hosted TLS.
+- views/login.ejs, views/logout.ejs, views/dashboard.ejs, views/users.ejs: accessible styled authentication and users pages.
+- views/partials/header.ejs, views/home.ejs, organization/project/category directory/detail views and views/errors/request.ejs: conditional navigation and management links.
+- views/register.ejs, public/css/style.css: registration minimum, logout button and responsive user table styling.
+- tests/authentication.test.js, tests/auth-integration.test.js, tests/verify-development-database.js: authentication/security and guarded local write tests.
+- tests/admin-client.js, existing Week 04 tests, tests/registration.test.js and tests/integration.test.js: authenticated regression fixtures and updated expectations.
+- tests/setup-integration-env.js, package.json, .env.example: guarded local integration runner and private credential inputs.
+- README.md: implementation, test coverage and verification limits.
+
+The application was not deployed or merged. Deployment and the grading account on any future hosted target still require separate authorization and verification. Manual browser/mobile/keyboard checks remain separate from automated HTTP/HTML verification.
+
+## Hosting verification before submission (future work; not Phase 1)
 
 Push the checked commit, confirm Render deploys the intended branch and commit, and verify the live home/list/detail routes, reciprocal links, logos, CSS, 404s, and `/test-error` HTTP 500 response. Check mobile layout and keyboard navigation in a browser. Ensure `DB_URL` is configured and `NODE_ENV=production` hides error details. A local HTTP/integration test does not establish successful Render deployment or guarantee a course grade.
