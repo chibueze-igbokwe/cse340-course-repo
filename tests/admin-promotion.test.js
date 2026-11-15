@@ -5,7 +5,7 @@ import { promoteWeek05Admin } from '../scripts/promote-week05-admin.js';
 
 const env = { RENDER: 'true', RUN_WEEK05_ADMIN_PROMOTION: 'true',
   WEEK05_ADMIN_EMAIL: 'synthetic@example.invalid', WEEK05_EXPECTED_DATABASE: 'course_production',
-  DB_URL: 'postgresql://fixture:synthetic@db.example.invalid/course_production' };
+  DB_URL: 'postgresql://fixture:synthetic@dpg-synthetic-a.oregon-postgres.render.com/course_production' };
 const fixture = (settings = {}) => {
   const calls = [];
   const logs = [];
@@ -13,14 +13,15 @@ const fixture = (settings = {}) => {
   class Client {
     constructor(options) {
       calls.push({ action: 'options', options });
-      this.connection = { stream: { encrypted: true, authorized: !settings.badTLS, remoteAddress: '192.0.2.1' } };
+      this.connection = { stream: { encrypted: true, authorized: !settings.badTLS,
+        remoteAddress: settings.internal ? '10.20.0.8' : '192.0.2.1' } };
     }
     async connect() { calls.push({ action: 'connect' }); }
     async end() { calls.push({ action: 'end' }); }
     async query(sql, values) {
       calls.push({ action: 'query', sql, values });
       if (sql.includes('current_database()')) return { rows: [{ database: settings.wrongDatabase ? 'wrong' : 'course_production',
-        address: '192.0.2.1', read_only: 'on', ssl: true }] };
+        address: settings.internal ? '10.20.0.8' : '192.0.2.1', read_only: 'on', ssl: true }] };
       if (sql.includes('FOR UPDATE')) return { rows: settings.accounts ?? [{ user_id: 7 }] };
       if (sql.includes('FOR SHARE')) return { rows: settings.roles ?? [{ role_id: 9 }] };
       if (sql.includes('UPDATE public.users')) {
@@ -33,7 +34,7 @@ const fixture = (settings = {}) => {
       return { rows: [] };
     }
   }
-  return { calls, logs, dependencies: { Client, resolve: async () => [{ address: '192.0.2.1' }], log: value => logs.push(value) } };
+  return { calls, logs, dependencies: { Client, resolve: async () => [{ address: settings.internal ? '10.20.0.8' : '192.0.2.1' }], log: value => logs.push(value) } };
 };
 const queries = calls => calls.filter(call => call.action === 'query');
 
@@ -109,4 +110,12 @@ test('CLI failure is nonzero and redacts environment values', () => {
   assert.match(result.stderr, /refused or failed/);
   assert.ok(!result.stderr.includes(env.DB_URL));
   assert.ok(!result.stderr.includes(env.WEEK05_ADMIN_EMAIL));
+});
+
+test('promotion also supports recognized internal encrypted TLS with all account guards retained', async () => {
+  const { calls, dependencies } = fixture({ internal: true, badTLS: true });
+  await promoteWeek05Admin({ ...env, DB_URL: 'postgresql://fixture:synthetic@dpg-synthetic-a/course_production' }, dependencies);
+  assert.equal(calls[0].options.ssl.rejectUnauthorized, false);
+  assert.ok(queries(calls).some(({ sql }) => sql.includes('FOR UPDATE')));
+  assert.ok(queries(calls).some(({ sql }) => sql === 'COMMIT'));
 });

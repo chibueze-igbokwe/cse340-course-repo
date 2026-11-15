@@ -1,5 +1,5 @@
 import { pathToFileURL } from 'node:url';
-import { connectProductionDatabase } from './run-week05-migration.js';
+import { connectProductionDatabase, safeFailure } from './run-week05-migration.js';
 
 // Explicit CLI operation only. Never imported by server.js; never loads dotenv.
 export const promoteWeek05Admin = async (env = process.env, dependencies = {}) => {
@@ -47,9 +47,9 @@ export const promoteWeek05Admin = async (env = process.env, dependencies = {}) =
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  promoteWeek05Admin().catch(() => {
+  promoteWeek05Admin().catch((error) => {
     // Never emit driver errors, account identifiers, connection details or hashes.
-    console.error('Week 05 administrator promotion refused or failed. Application startup stopped; review configuration and account privately.');
+    console.error(safeFailure('administrator promotion', error));
     process.exitCode = 1;
   });
 }

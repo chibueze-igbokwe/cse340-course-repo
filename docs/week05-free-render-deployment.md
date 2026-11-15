@@ -21,12 +21,24 @@ Render network addresses are allowed; loopback targets are not. The expected
 database name must be copied privately from the database dashboard, not guessed
 or derived automatically from DB_URL. It is a confirmation value, not a secret.
 
-TLS verification is mandatory even if DB_URL contains weaker SSL options. If
-the configured endpoint/certificate cannot be verified, stop and resolve its
-hostname/trust configuration. Do not switch to rejectUnauthorized=false. A
-trusted CA may be provided through NODE_EXTRA_CA_CERTS when necessary; never
-disable TLS verification. Connection errors are deliberately logged generically
-to avoid leaking connection details.
+TLS encryption is mandatory for every connection. Hostnames are normalized to
+lowercase and accepted only by these anchored rules:
+
+- Internal: `^dpg-[a-z0-9]+-[a-z]$` (one DNS label, no dots).
+- External: `^dpg-[a-z0-9]+-[a-z]\.(oregon|ohio|virginia|frankfurt|singapore)-postgres\.render\.com$`.
+
+All other hosts, IP literals, trailing dots and lookalike suffixes are refused.
+These are deliberately narrow supported formats; future Render formats require
+review before acceptance. Internal DNS answers, socket peer and server-reported
+address must be RFC1918 IPv4 (10/8, 172.16/12, 192.168/16) or IPv6 ULA (fc00::/7).
+Internal TLS uses a per-client rejectUnauthorized=false for Render's self-signed
+certificates. External TLS retains rejectUnauthorized=true and hostname/SNI.
+There is no global TLS override or plaintext fallback. URL sslmode parameters
+cannot weaken the selected policy. Both policies retain the same Render runtime,
+expected database name, server identity, read-only inspection and execution flags.
+Internal encryption does not authenticate the certificate; it relies on the
+validated hostname and Render private-network trust boundary, a deliberate
+security tradeoff authorized by the owner. Do not copy this policy to other hosts.
 
 ## Manual deployment steps (after separate approvals)
 
@@ -91,7 +103,7 @@ node scripts/promote-week05-admin.js && npm start
 ```
 
 Deploy the reviewed code. The promotion runner reuses the migration runner's
-verified TLS, remote-target and read-only database-identity checks. It locks
+host-scoped encrypted TLS, remote-target and read-only database-identity checks. It locks
 exactly one account selected by parameterized exact email, locks the existing
 admin role, changes only that account's role_id, verifies the joined admin role,
 and commits. Missing/ambiguous accounts or roles and failed verification abort;
@@ -125,3 +137,29 @@ PostgreSQL connection, public endpoint, paid shell or new dependency.
 
 Local mocked runner tests prove safeguard behavior, not Render connectivity,
 TLS certificate availability, production permissions or backup recoverability.
+
+## Safe failure diagnostics
+
+Runner failures now report only an allowlisted stage and error code. No driver
+message, stack, query detail, account email or connection string is printed.
+
+- configuration/W05_DB_URL or W05_EXPECTED_DATABASE: missing runtime setting.
+- configuration/W05_TARGET: URL database differs from the expected name, or
+  target is refused. Compare privately; do not paste URLs into logs/chat.
+- connection/DEPTH_ZERO_SELF_SIGNED_CERT, SELF_SIGNED_CERT_IN_CHAIN,
+  UNABLE_TO_VERIFY_LEAF_SIGNATURE or ERR_TLS_CERT_ALTNAME_INVALID: certificate
+  trust/hostname failure before any identity query or migration SQL.
+- dns/ENOTFOUND or connection/ECONNREFUSED: DNS/network connection failure.
+- identity/W05_IDENTITY: connected server did not satisfy identity/read-only/TLS
+  checks; no migration SQL submitted.
+- migration-sql/42501: PostgreSQL permissions failure. 42P07 means an existing
+  object conflict; P0001 can indicate the migration's compatibility refusal.
+  Keep full database diagnostics private when investigating the schema.
+
+Render documents self-signed TLS for internal connections:
+https://render.com/docs/postgresql-creating-connecting . Recognized internal
+hosts now use encrypted internal TLS as described above. A W05_HOST error means
+an unsupported hostname, and W05_TARGET can also indicate an internal hostname
+resolved outside private address ranges. Do not relax these checks or print
+connection details to troubleshoot. The original generic failure alone did not
+establish its cause. Production execution still requires separate approval.
