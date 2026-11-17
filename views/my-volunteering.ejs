@@ -1,0 +1,26 @@
+<%- include('partials/header') %>
+<main id="main-content" class="container section">
+  <p><a href="/dashboard">Return to My Dashboard</a></p>
+  <h1>My Volunteering</h1>
+  <p class="intro">All projects you have volunteered for, including past projects.</p>
+  <% if (!projects.length) { %>
+    <p>You have not volunteered for any projects yet. <a href="/projects">Explore upcoming service projects</a>.</p>
+  <% } else { %>
+    <ul class="card-grid project-list">
+      <% projects.forEach((project) => { %>
+        <li class="card">
+          <h2><a href="/project/<%= project.project_id %>"><%= project.title %></a></h2>
+          <p><strong>Date:</strong> <%= formatProjectDate(project.date) %></p>
+          <p><strong>Location:</strong> <%= project.location %></p>
+          <p><strong>Organization:</strong> <a href="/organization/<%= project.organization_id %>"><%= project.organization_name %></a></p>
+          <form action="/project/<%= project.project_id %>/remove-volunteering" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="returnTo" value="my-volunteering">
+            <button class="button" type="submit">Remove volunteering<span class="visually-hidden"> for <%= project.title %></span></button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

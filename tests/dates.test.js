@@ -34,11 +34,11 @@ for (const [timezone, offset] of [['UTC', 0], ['Africa/Lagos', -60], ['America/L
           assert.equal(parsed, date, 'DATE parser must preserve the original calendar day');
           const project = { project_id: 1, organization_id: 1, organization_name: 'Organization', title: 'Project', description: 'Description', location: 'Location', date: parsed };
           const locals = {
-            title: 'Date test', pageHeading: 'Upcoming Service Projects', NODE_ENV: 'production', project, projects: [project],
+            title: 'Date test', pageHeading: 'Upcoming Service Projects', NODE_ENV: 'production', project, projects: [project], csrfToken: 'test-only-token',
             categories: [], category: { category_id: 1, name: 'Category' },
             organizationDetails: { organization_id: 1, name: 'Organization', description: 'Description', logo: 'community.svg', email: 'hello@example.com' }
           };
-          for (const view of ['projects', 'project', 'organization', 'category']) {
+          for (const view of ['projects', 'project', 'organization', 'category', 'my-volunteering']) {
             assert.ok((await render(view, locals)).includes(expected), view + ': ' + date + ' must display ' + expected);
           }
           const editHtml = await render('edit-project', {

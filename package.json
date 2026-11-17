@@ -7,9 +7,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --import ./tests/setup-unit-env.js --test tests/week03.test.js tests/development.test.js tests/dates.test.js tests/week04.test.js tests/project-forms.test.js tests/category-forms.test.js tests/registration.test.js tests/authentication.test.js tests/migration-runner.test.js tests/admin-promotion.test.js",
+    "test": "node --import ./tests/setup-unit-env.js --test tests/week03.test.js tests/development.test.js tests/dates.test.js tests/week04.test.js tests/project-forms.test.js tests/category-forms.test.js tests/registration.test.js tests/authentication.test.js tests/migration-runner.test.js tests/admin-promotion.test.js tests/volunteering.test.js tests/week06-migration.test.js",
     "test:integration": "node --import ./tests/setup-integration-env.js --test --test-concurrency=1 tests/auth-integration.test.js tests/integration.test.js",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "test:week06:integration": "node --test tests/volunteering-integration.test.js"
   },
   "repository": {
     "type": "git",

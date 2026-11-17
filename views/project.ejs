@@ -14,6 +14,17 @@
     <dt>Organization</dt>
     <dd><a href="/organization/<%= project.organization_id %>"><%= project.organization_name %></a></dd>
   </dl>
+  <% if (isLoggedIn) { %>
+    <section aria-labelledby="project-volunteering">
+      <h2 id="project-volunteering">Volunteering</h2>
+      <p><%= volunteering ? 'You are volunteering for this project.' : 'Help your community by volunteering for this project.' %></p>
+      <form action="/project/<%= project.project_id %>/<%= volunteering ? 'remove-volunteering' : 'volunteer' %>" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="button" type="submit"><%= volunteering ? 'Remove volunteering' : 'Volunteer for this project' %></button>
+      </form>
+      <p><a href="/my-volunteering">View My Volunteering</a></p>
+    </section>
+  <% } %>
   <section aria-labelledby="project-categories">
     <h2 id="project-categories">Categories</h2>
   <% if (isAdmin) { %>

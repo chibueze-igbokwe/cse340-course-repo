@@ -6,6 +6,9 @@ import bcrypt from 'bcrypt';
 const password = randomBytes(16).toString('hex');
 const passwordHash = await bcrypt.hash(password, 4);
 export const mockAdminLookup = (query) => (sql, values) => {
+  if (/SELECT EXISTS[\s\S]*FROM volunteer/.test(sql)) {
+    return Promise.resolve({ rows: [{ volunteering: false }] });
+  }
   if (/FROM users u JOIN roles/.test(sql) && values?.[0] === 'fixture-admin@example.com') {
     return Promise.resolve({ rows: [{ user_id: 900, name: 'Fixture Admin', email: values[0], role_name: 'admin', password_hash: passwordHash }] });
   }

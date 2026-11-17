@@ -17,6 +17,7 @@ import {
 import { testErrorPage } from './controllers/errors.js';
 import { validateResourceId } from './middleware/validate-resource-id.js';
 import { requireFormToken } from './middleware/csrf.js';
+import { showMyVolunteering, processVolunteer, processRemoveVolunteering } from './controllers/volunteers.js';
 import {
   showUserRegistrationForm, processUserRegistrationForm, userRegistrationValidation,
   showLoginForm, processLoginForm, loginValidation, showLogoutForm, processLogout,
@@ -33,6 +34,7 @@ router.post('/login', requireFormToken, loginValidation, processLoginForm);
 router.get('/logout', requireLogin, showLogoutForm);
 router.post('/logout', requireLogin, requireFormToken, processLogout);
 router.get('/dashboard', requireLogin, showDashboard);
+router.get('/my-volunteering', requireLogin, showMyVolunteering);
 router.get('/users', ...adminOnly, showUsersPage);
 router.get('/organizations', showOrganizationsPage);
 router.get('/organization/:id', validateResourceId, showOrganizationDetailsPage);
@@ -43,6 +45,8 @@ router.post('/edit-organization/:id', ...adminOnly, validateResourceId, requireF
   organizationValidation, organizationLogoValidation, processEditOrganizationForm);
 router.get('/projects', showProjectsPage);
 router.get('/project/:id', validateResourceId, showProjectDetailsPage);
+router.post('/project/:id/volunteer', requireLogin, validateResourceId, requireFormToken, processVolunteer);
+router.post('/project/:id/remove-volunteering', requireLogin, validateResourceId, requireFormToken, processRemoveVolunteering);
 router.get('/new-project', ...adminOnly, showNewProjectForm);
 router.post('/new-project', ...adminOnly, requireFormToken, projectValidation, processNewProjectForm);
 router.get('/edit-project/:id', ...adminOnly, validateResourceId, showEditProjectForm);
