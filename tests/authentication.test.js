@@ -23,6 +23,7 @@ before(async () => {
   db.query = async (sql, values) => {
     calls.push({ sql, values });
     if (failure) throw new Error('Private authentication database details');
+    if (/FROM volunteer/.test(sql)) return { rows: [{ volunteering: false }] };
     if (/FROM users/.test(sql)) return { rows: values ? rows.filter((row) => row.email === values[0]) : rows.map(({ password_hash, ...user }) => user) };
     if (/FROM organization/.test(sql)) return { rows: [{ organization_id: 1, name: 'Organization', description: 'Description', email: 'a@example.com', logo: 'community.svg' }] };
     if (/FROM category/.test(sql)) return { rows: [{ category_id: 1, name: 'Category' }] };

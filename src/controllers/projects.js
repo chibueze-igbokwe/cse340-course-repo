@@ -5,6 +5,7 @@ import { getAllOrganizations } from '../models/organizations.js';
 import { body, validationResult } from 'express-validator';
 import { formToken } from '../middleware/csrf.js';
 import { isProjectDate } from '../utils/validate-project-date.js';
+import { isVolunteering } from '../models/volunteers.js';
 
 const NUMBER_OF_UPCOMING_PROJECTS = 5;
 
@@ -88,5 +89,9 @@ export const showProjectDetailsPage = async (req, res, next) => {
   const project = await getProjectDetails(req.params.id);
   if (!project) return notFound(req, res, next);
   const categories = await getCategoriesByProjectId(req.params.id);
-  res.render('project', { title: project.title + ' | Service Network', project, categories });
+  const volunteering = req.session?.user
+    ? await isVolunteering(req.session.user.user_id, req.params.id) : false;
+  if (req.session?.user) res.set('Cache-Control', 'no-store');
+  res.render('project', { title: project.title + ' | Service Network', project, categories,
+    volunteering, csrfToken: req.session?.user ? formToken(req) : '' });
 };

@@ -1,4 +1,4 @@
--- CSE340 Weeks 02–05: Service Network development database setup.
+-- CSE340 Weeks 02–06: Service Network development database setup.
 -- Run ONLY against a confirmed isolated, fresh development database.
 -- Existing tables cause this transaction to fail rather than resetting data.
 -- Never run against the Render database used for earlier-week grading.
@@ -52,6 +52,12 @@ INSERT INTO roles (role_name, role_description) VALUES
 ('user', 'Registered Service Network user'),
 ('admin', 'Service Network administrator');
 
+CREATE TABLE volunteer (
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES project(project_id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, project_id)
+);
+
 INSERT INTO organization (name, description, email, logo) VALUES
 ('Community Care Network', 'Connects volunteers with neighborhood support initiatives.', 'hello@communitycare.example', 'community.svg'),
 ('Green Future Initiative', 'Organizes environmental stewardship and sustainability projects.', 'contact@greenfuture.example', 'environment.svg'),
@@ -90,13 +96,14 @@ INSERT INTO project_category (project_id, category_id) VALUES
 COMMIT;
 
 -- Verification on a fresh database: 3 organizations, 15 projects, 5 categories,
--- 21 links, 2 roles, and 0 users. No default user accounts/passwords are seeded.
+-- 21 links, 2 roles, 0 users, and 0 volunteers. No default accounts/passwords are seeded.
 SELECT 'organization' AS table_name, COUNT(*) AS row_count FROM organization
 UNION ALL SELECT 'project', COUNT(*) FROM project
 UNION ALL SELECT 'category', COUNT(*) FROM category
 UNION ALL SELECT 'project_category', COUNT(*) FROM project_category
 UNION ALL SELECT 'roles', COUNT(*) FROM roles
-UNION ALL SELECT 'users', COUNT(*) FROM users;
+UNION ALL SELECT 'users', COUNT(*) FROM users
+UNION ALL SELECT 'volunteer', COUNT(*) FROM volunteer;
 
 -- Verification: should return no rows (every project has at least one category).
 SELECT p.project_id, p.title

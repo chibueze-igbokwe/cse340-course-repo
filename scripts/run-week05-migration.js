@@ -6,17 +6,18 @@ import pg from 'pg';
 
 const refusal = (code, message) => Object.assign(new Error(message), { code });
 // Never log driver messages, detail, SQL, URLs, certificate subjects or stacks.
-export const safeFailure = (operation, error) => {
+export const safeFailure = (operation, error, week = '05') => {
   const stages = ['configuration', 'dns', 'connection', 'tls', 'identity', 'migration-file', 'migration-sql'];
   const stage = stages.includes(error?.week05Stage) ? error.week05Stage : 'operation';
   const code = typeof error?.code === 'string' && (
     /^[0-9A-Z]{5}$/.test(error.code)
     || ['W05_RENDER', 'W05_DB_URL', 'W05_EXPECTED_DATABASE', 'W05_TARGET', 'W05_HOST', 'W05_TLS', 'W05_IDENTITY',
+      'W06_EXPECTED_DATABASE', 'W06_FLAG',
       'ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOENT',
       'DEPTH_ZERO_SELF_SIGNED_CERT', 'SELF_SIGNED_CERT_IN_CHAIN', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
       'UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'ERR_TLS_CERT_ALTNAME_INVALID', 'CERT_HAS_EXPIRED'].includes(error.code)
   ) ? error.code : 'UNCLASSIFIED';
-  return `Week 05 ${operation} refused or failed [stage=${stage} code=${code}]. Application startup stopped.`;
+  return `Week ${week === '06' ? '06' : '05'} ${operation} refused or failed [stage=${stage} code=${code}]. Application startup stopped.`;
 };
 
 // No dotenv or application imports: only Render's runtime environment is used.
